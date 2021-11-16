@@ -208,7 +208,7 @@ classdef Utils
             % Used for sensor modelling
             if ~exist('order','var')
                 % If Padé order is not specified, default to 3
-                order = 3;
+                order = 1;
             end
             s = tf('s');
             baseTF = exp(-lag*s);    
