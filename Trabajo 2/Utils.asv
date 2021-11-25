@@ -223,10 +223,7 @@ classdef Utils
 
         end
         
-        function K_dl =getKdl(G)
-            
-            K_dl = 1/G.K;
-        end
+        function 
     end
 end
 

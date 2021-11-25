@@ -155,7 +155,7 @@ classdef Plane
 %             obj.lat.Cn = obj.model.Cn;
 %         end  
         
-        function.
+        
 
     end
 end
