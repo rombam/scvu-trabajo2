@@ -128,34 +128,40 @@ classdef Plane
             obj.lat.G = Dynamics.LatDyn(obj);
         end      
         
-%         function obj = recalc(obj)
-%             % -- Recalculate body axes derivatives and TFs --
-%             % Useful if stability derivatives have been manually modified
-%             
-%             % Longitudinal channel
-%             obj.lon.CX.u = obj.model.CT.u*cos(obj.FC.epss)/cos(obj.FC.alphabs) - obj.model.CD.u ...
-%                        + obj.model.CL.u*obj.FC.alphabs;
-%             obj.lon.CX.alpha = obj.FC.CLs - obj.model.CD.alpha;
-%             obj.lon.CX.deltae = -obj.model.CD.deltae;
-%             obj.lon.CX.T = obj.FC.CTs*cos(obj.FC.epss);
-%             obj.lon.CZ.u = -obj.model.CT.u*sin(obj.FC.epss)/cos(obj.FC.alphabs) - obj.model.CL.u ...
-%                        - obj.model.CD.u*obj.FC.alphabs;
-%             obj.lon.CZ.alpha = -obj.model.CL.alpha - obj.FC.CDs;
-%             obj.lon.CZ.alphadot = -obj.model.CL.alphadot;
-%             obj.lon.CZ.q = -obj.model.CL.q;
-%             obj.lon.CZ.deltae = -obj.model.CL.deltae;
-%             obj.lon.CZ.T = -obj.FC.CTs*sin(obj.FC.epss)/cos(obj.FC.alphabs);
-%             obj.lon.Cm = obj.model.Cm;
-%             
-%             obj.lon.G = Dynamics.LongDyn(obj);
-% 
-%             % Lateral-directional channel
-%             obj.lat.CY = obj.model.CY;
-%             obj.lat.Cl = obj.model.Cl;
-%             obj.lat.Cn = obj.model.Cn;
-%         end  
-        
-        
+        function obj = recalc(obj)
+            % -- Recalculate body axes derivatives and TFs --
+            % Useful if stability derivatives have been manually modified
+            
+            % Longitudinal channel
+            obj.lon.CX.u = obj.model.CT.u*cos(obj.FC.epss)/cos(obj.FC.alphabs) - obj.model.CD.u ...
+                       + obj.model.CL.u*obj.FC.alphabs;
+            obj.lon.CX.alpha = obj.FC.CLs - obj.model.CD.alpha;
+            obj.lon.CX.deltae = -obj.model.CD.deltae;
+            obj.lon.CX.T = obj.FC.CTs*cos(obj.FC.epss);
+            obj.lon.CZ.u = -obj.model.CT.u*sin(obj.FC.epss)/cos(obj.FC.alphabs) - obj.model.CL.u ...
+                       - obj.model.CD.u*obj.FC.alphabs;
+            obj.lon.CZ.alpha = -obj.model.CL.alpha - obj.FC.CDs;
+            obj.lon.CZ.alphadot = -obj.model.CL.alphadot;
+            obj.lon.CZ.q = -obj.model.CL.q;
+            obj.lon.CZ.deltae = -obj.model.CL.deltae;
+            obj.lon.CZ.T = -obj.FC.CTs*sin(obj.FC.epss)/cos(obj.FC.alphabs);
+            obj.lon.Cm = obj.model.Cm;
+            
+            obj.lon.G = Dynamics.LongDyn(obj);
+
+            % Lateral-directional channel
+            obj.lat.CY = obj.model.CY;
+            obj.lat.Cl = obj.model.Cl;
+            obj.lat.Cn = obj.model.Cn;
+
+            % - Transfer functions -
+            % Longitudinal
+            obj.lon.G = Dynamics.LongDyn(obj);
+            
+            % Lateral
+            obj.lat.G = Dynamics.LatDyn(obj);
+        end  
+       
 
     end
 end
