@@ -227,20 +227,16 @@ classdef Utils
             
             K_dl = 1/G.K;
         end
-        function [t_r,t_d] = loquequieraelromanchio(y,t,amp)
-            
-        if ~exist('amp','var')
-           % If Padé order is not specified, default to 3
-           amp = y(end);
-        end
+        function [t_r,t_d] = loquequieraelromanchio(y,t)
         
-        dy = [];
+        dy = zeros(length(y),1);
         j = 0;
         t1=0;t2=0;
         for i = 1:length(t)
+            
             %Time delay calc
             if y(i) < max(y)
-                dy = [dy,(y(i+1) - y(i))/(t(i + 1) - t(i))];
+            dy(i) = (y(i+1) - y(i))/(t(i) - t(i + 1));
             end
             
             % Rise time calc
@@ -258,7 +254,7 @@ classdef Utils
         end
         [dy_max,i_td] = max(dy);
         
-        t_d = t(i_td) - (y(i_td)/dy_max);
+        t_d = t(i_td
         end
     end
 end
