@@ -227,25 +227,30 @@ classdef Utils
             
             K_dl = 1/G.K;
         end
-        function [t_r,t_d] = loquequieraelromanchio(y,t)
         
-        dy = zeros(length(y),1);
+        function [t_r,t_d] = getTimesRD(y,t,amp)
+            
+        if ~exist('amp','var')
+           amp = y(end);
+        end
+        
+        
+        dy = [];
         j = 0;
         t1=0;t2=0;
-        for i = 1:length(t)
-            
+        [ymax,imax] = max(y);
+        for i = 1:imax
             %Time delay calc
-            if y(i) < max(y)
-            dy(i) = (y(i+1) - y(i))/(t(i) - t(i + 1));
-            end
-            
+            if i <= imax
+                dy = [dy,(y(i+1) - y(i))/(t(i + 1) - t(i))];
+            end     
             % Rise time calc
-            if y(i) >= amp*0.1
+            if abs(y(i)) >= abs(amp*0.1)
                 if j == 0
                    t1 = t(i);
                    j = 1;
                 end
-                if y(i) <= amp*0.9
+                if abs(y(i)) <= abs(amp*0.9)
                     t2 = t(i);
                 end
             end
@@ -254,7 +259,7 @@ classdef Utils
         end
         [dy_max,i_td] = max(dy);
         
-        t_d = t(i_td
+        t_d = t(i_td) - (y(i_td)/dy_max);
         end
     end
 end

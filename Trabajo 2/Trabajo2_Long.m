@@ -117,7 +117,10 @@ G_a = Utils.padeTF(delay);
 % de ángulo de asiento de 1º por cada grado de deflexión del mando de cabeceo
 
 K_dl = 1/plane_OL.lon.G.Gthetadeltae.K; % Calculamos el K_DL para cada variable
-    
+
+
+fprintf("--------- Tiempos Característicos Lazo Abierto con K_dl + Gact + Gp -----------");
+
 for i = 1:length(varnames)
     fig = figure('Position', [100, 100, 1120, 420]);
     
@@ -180,11 +183,15 @@ for i = 1:length(varnames)
         sgtitle("")
         saveas(gcf,strcat("Graficas/Lon/Ramp_", varnames(i)),'eps')
     end
+    
+    % Rise Time and Time Delay Calculation and printing in console
+    
+    [tr,td] = Utils.getTimesRD(y,t);
+    fprintf(varnames(i) + "\n");
+    fprintf("Rise Time: " + num2str(tr) + " s\n");
+    fprintf("Time Delay: " + num2str(td) + " s\n");
 
 end
-%% Rise Time and Time Delay
-
-%[tr,td] = Utils.loquequieraelromanchio(y,t);
 
 %% -- 3. Análisis de sensibilidad de la planta libre --
 % Análisis del lugar de las raíces del modo de corto periodo

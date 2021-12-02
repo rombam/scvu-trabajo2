@@ -227,29 +227,31 @@ classdef Utils
             
             K_dl = 1/G.K;
         end
-        function [t_r,t_d] = loquequieraelromanchio(y,t,amp)
+        
+        function [t_r,t_d] = getTimesRD(y,t,amp)
             
         if ~exist('amp','var')
-           % If Padé order is not specified, default to 3
            amp = y(end);
         end
-        
         dy = [];
         j = 0;
         t1=0;t2=0;
-        for i = 1:length(t)
+        [ymax,imax] = max(y);
+        if amp + 0.01 < 0
+            [ymax,imax] = min(y);
+        end
+        for i = 1:imax
             %Time delay calc
-            if y(i) < max(y)
+            if i <= imax
                 dy = [dy,(y(i+1) - y(i))/(t(i + 1) - t(i))];
-            end
-            
+            end     
             % Rise time calc
-            if y(i) >= amp*0.1
+            if abs(y(i)) >= abs(amp*0.1)
                 if j == 0
                    t1 = t(i);
                    j = 1;
                 end
-                if y(i) <= amp*0.9
+                if abs(y(i)) <= abs(amp*0.9)
                     t2 = t(i);
                 end
             end
