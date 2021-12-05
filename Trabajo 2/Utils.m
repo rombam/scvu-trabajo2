@@ -5,7 +5,7 @@ classdef Utils
     % and sensor/actuator modelling TFs.
     
     methods (Static)    
-        %% ---- Unit conversion ----
+        %% ---- UNIT CONVERSION ----
         
         function m_value = ft_to_m(ft_value)
             % Converts from ft to m 
@@ -42,7 +42,7 @@ classdef Utils
             pa_value = lbft2_value*47.880172;
         end
         
-        %% ---- Atmosphere ----
+        %% ---- ATMOSPHERE ----
         
         function [T, P, rho] = ISA(h)
             % ISA model. h: meters.
@@ -62,7 +62,7 @@ classdef Utils
             rho = P/(R*T);           
         end
         
-        %% ---- Get dimension scales ----
+        %% ---- DIMENSION SCALES ----
         
         function scales = get_scales(plane)
             % Returns characteristic values
@@ -89,7 +89,7 @@ classdef Utils
             scales.lat.inertia = rho*plane.Sw*(plane.b/2)^3;            
         end
         
-        %% -- Transfer function utils --
+        %% ---- TRANSFER FUNCTION UTILS ----
 
         function TF_from_sym = syms2tf(G)
             % Returns a transfer function from a symbolic expression
@@ -201,14 +201,20 @@ classdef Utils
             Gf.poles.xi     = xi_p;            
             
         end
+        
+        %% --------- CONTROL SYSTEM BLOCKS --------
 
         % ----- Sensor and actuator modelling -----
         function pade_TF = padeTF(lag,order)
             % Returns a Padé approximation given a lag and order
             % Used for sensor modelling
             if ~exist('order','var')
-                % If Padé order is not specified, default to 3
+                % If Padé order is not specified, default to 1
                 order = 1;
+            end
+            if ~exist('lag','var')
+                % If lag time is not specified, default to 0.01 s
+                lag = 0.01;
             end
             s = tf('s');
             baseTF = exp(-lag*s);    
@@ -218,50 +224,56 @@ classdef Utils
         function forlag_TF = forlagTF(wb)
             % Returns a first order lag transfer function
             % Used for actuator modelling
+            if ~exist('wb','var')
+                % If cutoff frequency is not specified, default to 10 rad/s
+                wb = 10;
+            end
             s = tf('s');   
             forlag_TF = 1/(s/wb + 1);
 
         end
         
-        function K_dl =getKdl(G)
-            
+        % ----- Gain blocks -----
+        function K_dl = getKdl(G)
+            % Returns the direct link constant so that 1 degree of pilot stick
+            % deflection produces a change of 1 degree in pitch angle
             K_dl = 1/G.K;
         end
         
-        function [t_r,t_d] = getTimesRD(y,t,amp)
-            
-        if ~exist('amp','var')
-           amp = y(end);
-        end
-        dy = [];
-        j = 0;
-        t1=0;t2=0;
-        [ymax,imax] = max(y);
-        if amp + 0.01 < 0
-            [ymax,imax] = min(y);
-        end
-        for i = 1:imax
-            %Time delay calc
-            if i <= imax
-                dy = [dy,(y(i+1) - y(i))/(t(i + 1) - t(i))];
-            end     
-            % Rise time calc
-            if abs(y(i)) >= abs(amp*0.1)
-                if j == 0
-                   t1 = t(i);
-                   j = 1;
-                end
-                if abs(y(i)) <= abs(amp*0.9)
-                    t2 = t(i);
-                end
-            end
-            t_r = t2 - t1;
-
-        end
-        [dy_max,i_td] = max(dy);
+        %% ------ TIME RESPONSE UTILS -------
         
-        t_d = t(i_td) - (y(i_td)/dy_max);
-        end
+        function [t_r,t_d] = getTimesRD(y,t,amp)
+            % Returns time delay and rise time of a temporal response y(t)
+            if ~exist('amp','var')
+                amp = y(end);
+            end
+            dy = [];
+            j = 0;
+            t1=0;t2=0;
+            [ymax,imax] = max(y);
+            if amp + 0.01 < 0
+                [ymax,imax] = min(y);
+            end
+            for i = 1:imax
+                %Time delay calc
+                if i <= imax
+                    dy = [dy,(y(i+1) - y(i))/(t(i + 1) - t(i))];
+                end     
+                % Rise time calc
+                if abs(y(i)) >= abs(amp*0.1)
+                    if j == 0
+                        t1 = t(i);
+                        j = 1;
+                    end
+                    if abs(y(i)) <= abs(amp*0.9)
+                        t2 = t(i);
+                    end
+                end
+                t_r = t2 - t1;
+            end
+            [dy_max,i_td] = max(dy);
+            t_d = t(i_td) - (y(i_td)/dy_max);
+            end
     end
 end
 
