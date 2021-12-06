@@ -97,7 +97,7 @@ classdef Utils
             [symNum, symDen] = numden(G);   %Get num and den of Symbolic TF
             num = sym2poly(symNum);         %Convert Symbolic num to polynomial
             den = sym2poly(symDen);         %Convert Symbolic den to polynomial
-            TF_from_sym = tf(num, den);
+            TF_from_sym = tf(num,den);
         end
         
         function sym_from_TF = tf2syms(G)
@@ -273,7 +273,13 @@ classdef Utils
             end
             [dy_max,i_td] = max(dy);
             t_d = t(i_td) - (y(i_td)/dy_max);
-            end
+        end
+            
+     %% AUTOPILOT CALCULATOR
+     
+     function Gapcl = craftAP(pid,Gsas,Gs)
+         Gapcl = (pid*Gsas)/(1+pid*Gsas*Gs);
+     end
     end
 end
 

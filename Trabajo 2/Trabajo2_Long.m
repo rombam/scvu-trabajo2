@@ -116,7 +116,7 @@ G_a = Utils.padeTF(delay);
 % Se seleccionará una ganancia de Direct-Link que proporcione un incremento
 % de ángulo de asiento de 1º por cada grado de deflexión del mando de cabeceo
 
-K_dl = 1/plane_OL.lon.G.Gthetadeltae.K; % Calculamos el K_DL para cada variable
+K_dl = 1/plane_OL.lon.G.Gthetadeltae.K; % Calculamos el K_DL para theta
 
 
 fprintf("--------- Tiempos Característicos Lazo Abierto con K_dl + Gact + Gp -----------");
