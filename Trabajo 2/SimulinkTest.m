@@ -68,8 +68,8 @@ Gs_alpha_num = cell2mat(Gs_alpha_num); Gs_alpha_den = cell2mat(Gs_alpha_den);
 Gs_q_num = cell2mat(Gs_q_num); Gs_q_den = cell2mat(Gs_q_den);
 G_a_deltae_num = cell2mat(G_a_deltae_num); G_a_deltae_den = cell2mat(G_a_deltae_den);
 
-K_deltae_q = 5;
-K_deltae_alpha = 5;
+K_deltae_q = -0.005;
+K_deltae_alpha = -0.005;
 
 [Gp_u_deltae_num,Gp_u_deltae_den]=tfdata(zpk(zero(plane_OL.lon.G.(genvarname(Gnames(1))).(genvarname("Gfact"))*scales(1)),pole(plane_OL.lon.G.(genvarname(Gnames(1))).(genvarname("Gfact"))*scales(1)),plane_OL.lon.G.(genvarname(Gnames(1))).K_dim));
 [Gp_alpha_deltae_num,Gp_alpha_deltae_den]=tfdata(zpk(zero(plane_OL.lon.G.(genvarname(Gnames(2))).(genvarname("Gfact"))*scales(2)),pole(plane_OL.lon.G.(genvarname(Gnames(2))).(genvarname("Gfact"))*scales(2)),plane_OL.lon.G.(genvarname(Gnames(2))).K_dim));
