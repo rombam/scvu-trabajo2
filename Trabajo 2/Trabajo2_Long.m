@@ -215,9 +215,9 @@ ylabel('Im(s)','Interpreter','latex')
 xlim([-10 5])
 ylim([-17 17])
 ax=gca;
-ax.FontSize = 20;
-ax.YTickLabel.fontsize = 16;
-ax.XTickLabel.fontsize = 16;
+ax.FontSize = 16;
+%ax.YTickLabel.fontsize = 16;
+%ax.XTickLabel.fontsize = 16;
 hold on
 grid minor
 
@@ -245,4 +245,52 @@ quiver(-1.95, -4, 0, 3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
 quiver(-1.95, 4, 0, -3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
 quiver(-3.5, 0, -1.25, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
 quiver(-0.5, 0, 1.4, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
+
+%% -- 4. Barrido de ganancias de realimentación
+
+k_deltae_alpha = -(F_alpha - 1)*(plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae);
+k_deltae_q = - (F_q - 1)*(plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon);
+
+
+% % Root locus
+% figure
+% polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
+% poles_SP_0 = polesAUX(1);
+% plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+% %set(gca,'linewidth',1)
+% xlabel('Re(s)','Interpreter','latex')
+% ylabel('Im(s)','Interpreter','latex')
+% xlim([-10 5])
+% ylim([-17 17])
+% ax=gca;
+% ax.FontSize = 16;
+% %ax.YTickLabel.fontsize = 16;
+% %ax.XTickLabel.fontsize = 16;
+% hold on
+% grid minor
+% 
+% for i=1:length(F_alpha)
+%     plane_Aux.model.Cm.alpha = plane_OL.model.Cm.alpha*F_alpha(i);
+%     for j=1:length(F_q)
+%         plane_Aux.model.Cm.q = plane_OL.model.Cm.q*F_q(j);
+%         plane_Aux = plane_Aux.recalc;
+%         polesAUX = pole(plane_Aux.lon.G.Galphadeltae.Gfact);
+%         poles_SP(i,j) = polesAUX(1);
+%         if F_alpha(i)==1 && F_q(j)==1
+%         else
+%             if imag(poles_SP(i,j)) ~= 0
+%                 plot([poles_SP(i,j) conj(poles_SP(i,j))],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
+%                 hold on
+%             else
+%                 plot([poles_SP(i,j) 2*real(poles_SP_0)-poles_SP(i,j)],[0 0],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
+%                 hold on
+%             end
+%         end
+%     end
+% end
+% sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
+% quiver(-1.95, -4, 0, 3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
+% quiver(-1.95, 4, 0, -3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
+% quiver(-3.5, 0, -1.25, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
+% quiver(-0.5, 0, 1.4, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
 
