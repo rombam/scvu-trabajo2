@@ -241,7 +241,7 @@ classdef Utils
         end
         
         %% ------ TIME RESPONSE UTILS -------
-        
+
         function [t_r,t_d] = getTimesRD(y,t,amp)
             % Returns time delay and rise time of a temporal response y(t)
             if ~exist('amp','var')
@@ -257,7 +257,7 @@ classdef Utils
                 m = -1;
             end
             for i = 1:imax
-                %Time delay calc
+                % Time delay calc
                 if i <= imax
                     dy = [dy,(y(i+1) - y(i))/(t(i + 1) - t(i))];
                 end     
@@ -277,7 +277,7 @@ classdef Utils
             t_d = t(i_tmax) - m*(y(i_tmax)/dy_max);
         end
             
-     %% AUTOPILOT CALCULATOR
+     %% ------- AUTOPILOT CALCULATOR -------
      
      function Gapcl = craftAP(pid,Gsas,Gs)
          Gapcl = (pid*Gsas)/(1+pid*Gsas*Gs);

@@ -246,51 +246,76 @@ quiver(-1.95, 4, 0, -3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
 quiver(-3.5, 0, -1.25, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
 quiver(-0.5, 0, 1.4, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
 
-%% -- 4. Barrido de ganancias de realimentación
+%% -- 4. Barrido de ganancias de realimentación --
+% Análisis del lugar de las raíces del modo de corto periodo con
+% realimentación en alpha y q.
+% Análisis de la función de transferencia de deltae a theta en lazo
+% cerrado.
+clear
+plane_OL = Plane(Learjet24);
 
-k_deltae_alpha = -(F_alpha - 1)*(plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae);
-k_deltae_q = - (F_q - 1)*(plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon);
+% Funciones de transferencia y Kdl
+Ga_deltae = 1;
+Gs_alpha = 1;
+Gs_q = 1;
+Gthetadeltae_pl = plane_OL.lon.G.Gthetadeltae.Gfact;
+Galphadeltae_pl = plane_OL.lon.G.Galphadeltae.Gfact;
+K_DL = 1/plane_OL.lon.G.Gthetadeltae.K;
 
+% Factores de multiplicidad Cmalpha y Cmq
+F_alpha  = [-0.5 0 0.5 1 2 3];
+%F_alpha = 1;
+%F_q      = [-1 0 1 2 4 5];
+F_q = 1;
+Kalpha   = - (F_alpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
+Kq       = - (F_q-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae;
+poles_SP = zeros(length(Kalpha),length(Kq));
 
-% % Root locus
-% figure
-% polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
-% poles_SP_0 = polesAUX(1);
-% plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
-% %set(gca,'linewidth',1)
-% xlabel('Re(s)','Interpreter','latex')
-% ylabel('Im(s)','Interpreter','latex')
-% xlim([-10 5])
-% ylim([-17 17])
-% ax=gca;
-% ax.FontSize = 16;
-% %ax.YTickLabel.fontsize = 16;
-% %ax.XTickLabel.fontsize = 16;
-% hold on
-% grid minor
-% 
-% for i=1:length(F_alpha)
-%     plane_Aux.model.Cm.alpha = plane_OL.model.Cm.alpha*F_alpha(i);
-%     for j=1:length(F_q)
-%         plane_Aux.model.Cm.q = plane_OL.model.Cm.q*F_q(j);
-%         plane_Aux = plane_Aux.recalc;
-%         polesAUX = pole(plane_Aux.lon.G.Galphadeltae.Gfact);
-%         poles_SP(i,j) = polesAUX(1);
-%         if F_alpha(i)==1 && F_q(j)==1
-%         else
-%             if imag(poles_SP(i,j)) ~= 0
-%                 plot([poles_SP(i,j) conj(poles_SP(i,j))],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
-%                 hold on
-%             else
-%                 plot([poles_SP(i,j) 2*real(poles_SP_0)-poles_SP(i,j)],[0 0],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
-%                 hold on
-%             end
-%         end
-%     end
-% end
-% sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
-% quiver(-1.95, -4, 0, 3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
-% quiver(-1.95, 4, 0, -3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
-% quiver(-3.5, 0, -1.25, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
-% quiver(-0.5, 0, 1.4, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
+% Root locus
+figure
+polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
+poles_SP_0 = polesAUX(1);
+plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+xlabel('Re(s)','Interpreter','latex')
+ylabel('Im(s)','Interpreter','latex')
+xlim([-10 5])
+ylim([-17 17])
+hold on
+grid minor
 
+for i=1:length(Kalpha)
+    for j=1:length(Kq)
+        % -- Ensamblaje de la FT en lazo cerrado --
+        s = tf('s');
+        Gthetadeltae_CL{i,j} = K_DL*(Ga_deltae*Gthetadeltae_pl)/(1+Ga_deltae*Kalpha(i)*Gs_alpha*Galphadeltae_pl +...
+                                     Kq(j)*Gs_q*s*Gthetadeltae_pl);
+        polesAUX = pole(Gthetadeltae_CL{i,j});
+        poles_SP(i,j) = polesAUX(1);
+        if Kalpha(i)==0 && Kq(j)==0
+        else
+            if imag(poles_SP(i,j)) ~= 0
+                plot([poles_SP(i,j) conj(poles_SP(i,j))],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
+                hold on
+            else
+                plot([poles_SP(i,j) 2*real(poles_SP_0)-poles_SP(i,j)],[0 0],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
+                hold on
+            end
+        end
+    end
+end
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
+
+%% -- 5. Diseño del SAS --
+plane_cont = Plane(GlobalHawk);
+
+% Ganancias de realimentación
+Kalpha = 0;
+Kq = 0;
+plane_cont.lon.Cont.Gudeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gudeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
+plane_cont.lon.Cont.Galphadeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Galphadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
+plane_cont.lon.Cont.Gthetadeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
+plane_cont.lon.Cont.Gqdeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
