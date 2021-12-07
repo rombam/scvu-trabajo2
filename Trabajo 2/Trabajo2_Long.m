@@ -247,15 +247,16 @@ quiver(-3.5, 0, -1.25, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
 quiver(-0.5, 0, 1.4, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
 
 %% -- 4. Barrido de ganancias de realimentación --
+% WORK IN PROGRESS
 % Análisis del lugar de las raíces del modo de corto periodo con
 % realimentación en alpha y q.
 % Análisis de la función de transferencia de deltae a theta en lazo
 % cerrado.
 clear
-plane_OL = Plane(Learjet24);
+plane_OL = Plane(GlobalHawk);
 
 % Funciones de transferencia y Kdl
-Ga_deltae = 1;
+Ga_deltae = Utils.forlagTF;
 Gs_alpha = 1;
 Gs_q = 1;
 Gthetadeltae_pl = plane_OL.lon.G.Gthetadeltae.Gfact;
@@ -263,23 +264,26 @@ Galphadeltae_pl = plane_OL.lon.G.Galphadeltae.Gfact;
 K_DL = 1/plane_OL.lon.G.Gthetadeltae.K;
 
 % Factores de multiplicidad Cmalpha y Cmq
-F_alpha  = [-0.5 0 0.5 1 2 3];
+F_alpha  = [-0.5 -0.2 0 0.5 1 2 3 4];
 %F_alpha = 1;
-%F_q      = [-1 0 1 2 4 5];
+%F_q      = [-0.5 -0.2 0 0.5 1 2 3 4];
 F_q = 1;
 Kalpha   = - (F_alpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
-Kq       = - (F_q-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae;
+Kq       = - (F_q-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
 poles_SP = zeros(length(Kalpha),length(Kq));
 
-% Root locus
+% Root locus. Ploteamos primero el corto periodo y el polo del actuador
+% base
 figure
 polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
 poles_SP_0 = polesAUX(1);
 plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+hold on
+plot(-10,0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
 xlabel('Re(s)','Interpreter','latex')
 ylabel('Im(s)','Interpreter','latex')
-xlim([-10 5])
-ylim([-17 17])
+xlim([-20 3])
+ylim([-20 20])
 hold on
 grid minor
 
@@ -289,16 +293,30 @@ for i=1:length(Kalpha)
         s = tf('s');
         Gthetadeltae_CL{i,j} = K_DL*(Ga_deltae*Gthetadeltae_pl)/(1+Ga_deltae*Kalpha(i)*Gs_alpha*Galphadeltae_pl +...
                                      Kq(j)*Gs_q*s*Gthetadeltae_pl);
-        polesAUX = pole(Gthetadeltae_CL{i,j});
-        poles_SP(i,j) = polesAUX(1);
+        polesAUX = round(pole(Gthetadeltae_CL{i,j}),4);
+        zerosAUX = round(zero(Gthetadeltae_CL{i,j}),4);
+        % Quita a la lista de polos los ceros que sean iguales a estos.
+        % Para eliminar los polos residuales de la planta libre.
+        polesAUXclean = setdiff(polesAUX,zerosAUX);
         if Kalpha(i)==0 && Kq(j)==0
         else
-            if imag(poles_SP(i,j)) ~= 0
-                plot([poles_SP(i,j) conj(poles_SP(i,j))],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
-                hold on
+            if Kalpha(i) < 0
+                marker = 's';
             else
-                plot([poles_SP(i,j) 2*real(poles_SP_0)-poles_SP(i,j)],[0 0],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
-                hold on
+                marker = '^';
+            end
+            for k=1:length(polesAUXclean)
+                % -- Bucle en todos los polos --
+                % Filtramos los polos cerca del origen (modo fugoide) a
+                % mano. Mejorable.
+                if abs(imag(polesAUXclean(k))) >= 0.3
+                    plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
+                    hold on
+                elseif abs(real(polesAUXclean(k))) >= 0.15
+                    plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
+                    hold on
+                else
+                end
             end
         end
     end
