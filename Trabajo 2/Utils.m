@@ -250,9 +250,11 @@ classdef Utils
             dy = [];
             j = 0;
             t1=0;t2=0;
+            m = 1;
             [ymax,imax] = max(y);
             if amp + 0.01 < 0
                 [ymax,imax] = min(y);
+                m = -1;
             end
             for i = 1:imax
                 %Time delay calc
@@ -269,10 +271,10 @@ classdef Utils
                         t2 = t(i);
                     end
                 end
-                t_r = t2 - t1;
+                t_r = abs(t2 - t1);
             end
-            [dy_max,i_td] = max(dy);
-            t_d = t(i_td) - (y(i_td)/dy_max);
+            [dy_max,i_tmax] = max(abs(dy));
+            t_d = t(i_tmax) - m*(y(i_tmax)/dy_max);
         end
             
      %% AUTOPILOT CALCULATOR

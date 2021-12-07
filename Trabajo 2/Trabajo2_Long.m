@@ -119,7 +119,7 @@ G_a = Utils.padeTF(delay);
 K_dl = 1/plane_OL.lon.G.Gthetadeltae.K; % Calculamos el K_DL para theta
 
 
-fprintf("--------- Tiempos Característicos Lazo Abierto con K_dl + Gact + Gp -----------");
+fprintf("--------- Tiempos Característicos Lazo Abierto con K_dl + Gact + Gp -----------\n");
 
 for i = 1:length(varnames)
     fig = figure('Position', [100, 100, 1120, 420]);
