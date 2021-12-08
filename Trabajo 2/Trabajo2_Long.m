@@ -74,7 +74,7 @@ if dim == false
                        "$\Delta \theta$ [rad]";...
                        "$\Delta \hat{q}$ [-]"];
     angleunits      = '\hspace{0.75 mm}rad$';
-else
+elseif dim == true
 	scales = [plane_OL.FC.us/(180/pi);...  % Velocidad/ángulo
               1;...                     % Ángulo/ángulo
               1;...                     % Ángulo/Ángulo
@@ -319,3 +319,195 @@ plane_cont.lon.Cont.Gthetadeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gthetadeltae
                                      Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
 plane_cont.lon.Cont.Gqdeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
                                      Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
+
+                                 
+%% --6. Diseño de AP
+
+% Datos preliminares para respuesta en rampa
+tsimtr = [150 50 200 300];    % Tiempo total de simulación - transitorio [s]
+tsimst = [500 500 500 500];   % Tiempo total de simulación - estacionario [s]
+tramp  = 5;                   % Tiempo de rampeo [s]
+amp    = 1;                   % Amplitud de la rampa [º]
+
+% Barrido PID
+
+% 1) Proporcional
+
+lims = [1e-2 1e2];
+
+% Valores PID
+k_p = [-0.05,-0.1,-0.15,-0.2,-0.5,-1];
+k_i = 0;
+k_d = 0;
+Gs_theta = 1;
+
+% Margenes y fases
+
+Gms_p = zeros(1,length(k_p));
+Pms_p = zeros(1,length(k_p));
+wp_p = zeros(1,length(k_p));
+
+f_nichols = figure;
+f_step = figure('Position', [100, 100, 600, 420]);
+
+nopts = nicholsoptions;
+	nopts.PhaseMatching = 'on';
+	nopts.PhaseMatchingFreq = lims(1);
+	nopts.PhaseMatchingValue = 0;
+    
+	nopts.XLabel.String = '$\phi(\omega)$';
+	nopts.XLabel.FontSize = 13;
+	nopts.XLabel.Interpreter = 'latex';
+    
+	nopts.YLabel.FontSize = 13;
+	nopts.YLabel.Interpreter = 'latex';
+    
+	nopts.Title.FontSize = 14;
+	nopts.Title.Interpreter = 'latex';
+    
+    nopts.YLabel.String = Magnames_latex(3);
+    nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
+
+set(0, 'CurrentFigure', f_step)
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+%     axes('Position',[.67 .73 .15 .15]); hold on
+%     box on; % put box around new pair of axes
+
+for i=1:length(k_p)
+    
+    PID_AP = pid(k_p(i),k_i,k_d);
+    Gap_theta = Utils.craftAP(PID_AP,plane_cont.lon.Cont.Galphadeltae/K_DL,Gs_theta);
+    
+    % Nichols plotting
+    set(0, 'CurrentFigure', f_nichols)
+    nicholsplot(Gap_theta, {lims(1), lims(2)}, nopts, 'k'); hold on
+    
+    % Step Plotting
+    set(0, 'CurrentFigure', f_step)
+    % Transitorio
+    t = 0:0.05:tsimtr(3);
+    u = max(0,min(amp/tramp*(t),amp));
+    [y, t_out, ~] = lsim(Gap_theta, u, t);
+    plot(t_out, y, 'k'); hold on
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    
+        % Zoom en perturbación
+%     ax2.indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
+%     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+%     grid on;
+%     axis tight
+
+    % Sacamos los valores de margen de fase y ganancia
+    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta);
+    Gms_p(i) = Gm; Pms_p(i) = Pm; wp_p(i) = Wcp; 
+    
+end
+
+set(0, 'CurrentFigure', f_step)
+    grid minor
+    hold on
+    box on
+set(0, 'CurrentFigure', f_nichols)
+    grid minor
+    hold on
+    box on
+    
+
+    
+% 2) Integrador
+
+lims = [1e-2 1e2];
+
+% Valores PID
+k_p = -1;
+k_i = [0,-0.01,-0.02,-0.05,-0.1,-0.2];
+k_d = 0;
+Gs_theta = 1;
+
+% Margenes y fases
+
+Gms_p = zeros(1,length(k_i));
+Pms_p = zeros(1,length(k_i));
+wp_p = zeros(1,length(k_i));
+
+
+f_nichols = figure;
+f_step = figure('Position', [100, 100, 600, 420]);
+
+nopts = nicholsoptions;
+	nopts.PhaseMatching = 'on';
+	nopts.PhaseMatchingFreq = lims(1);
+	nopts.PhaseMatchingValue = 0;
+    
+	nopts.XLabel.String = '$\phi(\omega)$';
+	nopts.XLabel.FontSize = 13;
+	nopts.XLabel.Interpreter = 'latex';
+    
+	nopts.YLabel.FontSize = 13;
+	nopts.YLabel.Interpreter = 'latex';
+    
+	nopts.Title.FontSize = 14;
+	nopts.Title.Interpreter = 'latex';
+    
+    nopts.YLabel.String = Magnames_latex(3);
+    nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
+
+set(0, 'CurrentFigure', f_step)
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+%     axes('Position',[.67 .73 .15 .15]); hold on
+%     box on; % put box around new pair of axes
+
+for i=1:length(k_i)
+    
+    PID_AP = pid(k_p,k_i(i),k_d);
+    Gap_theta = Utils.craftAP(PID_AP,plane_cont.lon.Cont.Galphadeltae/K_DL,Gs_theta);
+    
+    % Nichols plotting
+    set(0, 'CurrentFigure', f_nichols)
+    nicholsplot(Gap_theta, {lims(1), lims(2)}, nopts, 'k'); hold on
+    
+    % Step Plotting
+    set(0, 'CurrentFigure', f_step)
+    % Transitorio
+    t = 0:0.05:tsimtr(4);
+    u = max(0,min(amp/tramp*(t),amp));
+    [y, t_out, ~] = lsim(Gap_theta, u, t);
+    plot(t_out, y, 'k'); hold on
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    
+        % Zoom en perturbación
+%     ax2.indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
+%     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+%     grid on;
+%     axis tight
+    
+    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta);
+    Gms_p(i) = Gm; Pms_p(i) = Pm; wp_p(i) = Wcp; 
+end
+
+set(0, 'CurrentFigure', f_step)
+    grid minor
+    hold on
+    box on
+set(0, 'CurrentFigure', f_nichols)
+    grid minor
+    hold on
+    box on
