@@ -338,14 +338,78 @@ plane_cont.lon.Cont.Gthetadeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gthetadeltae
 plane_cont.lon.Cont.Gqdeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
                                      Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
 
+
                                  
-%% --6. Diseño de AP
+%% -- 6.1. Diseño AP: Root Locus (MIRAR ESTO QUE CREO QUE ESTA MAL)
+
+% Valores PID
+k_p = [-0.05,-0.1,-0.15,-0.2,-0.5,-1,-2,-5];
+k_i = [0,-0.01,-0.02,-0.05,-0.1,-0.2,-0.5,-1];
+k_d = 0; % Lo ponemos a cero porque basicamente no afecta demasiado a la estabilidad del sistema
+
+% base
+figure
+polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
+poles_SP_0 = polesAUX(1);
+plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+hold on
+plot(-10,0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+xlabel('Re(s)','Interpreter','latex')
+ylabel('Im(s)','Interpreter','latex')
+xlim([-15 3])
+ylim([-20 20])
+hold on
+grid minor
+
+
+for i=1:length(k_p)
+    for j=1:length(k_i)             
+        % -- Ensamblaje de la FT en lazo cerrado --
+        
+        PID_AP = pid(k_p(i),k_i(j),k_d);
+        Gap_theta = Utils.craftAP(PID_AP,plane_cont.lon.Cont.Galphadeltae/K_DL,Gs_theta);
+        polesAUX = round(pole(Gap_theta),4);
+        zerosAUX = round(zero(Gap_theta),4);
+        % Quita a la lista de polos los ceros que sean iguales a estos.
+        % Para eliminar los polos residuales de la planta libre.
+        polesAUXclean = setdiff(polesAUX,zerosAUX);
+        if k_p(i)==0 && k_i(j)==0
+        else
+            if k_p(i) < 0
+                marker = 's';
+            else
+                marker = '^';
+            end
+            for k=1:length(polesAUXclean)
+                % -- Bucle en todos los polos --
+                % Filtramos los polos cerca del origen (modo fugoide) a
+                % mano. Mejorable.
+                if abs(imag(polesAUXclean(k))) >= 0.3
+                    plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
+                    hold on
+                elseif abs(real(polesAUXclean(k))) >= 0.15
+                    plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
+                    hold on
+                else
+                end
+            end
+        end
+    end
+end
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
+
+
+
+
+%% -- 6.2 Diseño de AP: PID
 
 % Datos preliminares para respuesta en rampa
 tsimtr = [150 50 200 300];    % Tiempo total de simulación - transitorio [s]
 tsimst = [500 500 500 500];   % Tiempo total de simulación - estacionario [s]
 tramp  = 5;                   % Tiempo de rampeo [s]
 amp    = 1;                   % Amplitud de la rampa [º]
+
+syms = ['k','--k',':k','-.k','-k','.k'];
 
 % Barrido PID
 
@@ -400,10 +464,11 @@ for i=1:length(k_p)
     
     PID_AP = pid(k_p(i),k_i,k_d);
     Gap_theta = Utils.craftAP(PID_AP,plane_cont.lon.Cont.Galphadeltae/K_DL,Gs_theta);
+    Gap_theta_ol = PID_AP*(plane_cont.lon.Cont.Galphadeltae/K_DL);
     
     % Nichols plotting
     set(0, 'CurrentFigure', f_nichols)
-    nicholsplot(Gap_theta, {lims(1), lims(2)}, nopts, 'k'); hold on
+    nicholsplot(Gap_theta_ol, {lims(1), lims(2)},nopts, syms(i)); hold on
     
     % Step Plotting
     set(0, 'CurrentFigure', f_step)
@@ -411,7 +476,7 @@ for i=1:length(k_p)
     t = 0:0.05:tsimtr(3);
     u = max(0,min(amp/tramp*(t),amp));
     [y, t_out, ~] = lsim(Gap_theta, u, t);
-    plot(t_out, y, 'k'); hold on
+    plot(t_out, y, syms(i)); hold on
     ax = gca;
     ax.FontSize = 13; 
     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
@@ -425,8 +490,14 @@ for i=1:length(k_p)
 %     axis tight
 
     % Sacamos los valores de margen de fase y ganancia
-    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta);
+    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
     Gms_p(i) = Gm; Pms_p(i) = Pm; wp_p(i) = Wcp; 
+    
+    % Calculo de Tiempos característicos
+    [tr,td] = Utils.getTimesRD(y,t);
+    fprintf("Kp = "+ k_p(i) + ", Kd = " + k_d + ", Ki = " + k_i + "\n");
+    fprintf("Rise Time: " + num2str(tr) + " s\n");
+    fprintf("Time Delay: " + num2str(td) + " s\n");
     
 end
 
@@ -446,16 +517,16 @@ set(0, 'CurrentFigure', f_nichols)
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = -1;
+k_p = -3;
 k_i = [0,-0.01,-0.02,-0.05,-0.1,-0.2];
 k_d = 0;
 Gs_theta = 1;
 
 % Margenes y fases
 
-Gms_p = zeros(1,length(k_i));
-Pms_p = zeros(1,length(k_i));
-wp_p = zeros(1,length(k_i));
+Gms_i = zeros(1,length(k_i));
+Pms_i = zeros(1,length(k_i));
+wp_i = zeros(1,length(k_i));
 
 
 f_nichols = figure;
@@ -493,10 +564,11 @@ for i=1:length(k_i)
     
     PID_AP = pid(k_p,k_i(i),k_d);
     Gap_theta = Utils.craftAP(PID_AP,plane_cont.lon.Cont.Galphadeltae/K_DL,Gs_theta);
+    Gap_theta_ol = PID_AP*(plane_cont.lon.Cont.Galphadeltae/K_DL);
     
     % Nichols plotting
     set(0, 'CurrentFigure', f_nichols)
-    nicholsplot(Gap_theta, {lims(1), lims(2)}, nopts, 'k'); hold on
+    nicholsplot(Gap_theta_ol, {lims(1), lims(2)}, nopts, syms(i)); hold on
     
     % Step Plotting
     set(0, 'CurrentFigure', f_step)
@@ -504,7 +576,7 @@ for i=1:length(k_i)
     t = 0:0.05:tsimtr(4);
     u = max(0,min(amp/tramp*(t),amp));
     [y, t_out, ~] = lsim(Gap_theta, u, t);
-    plot(t_out, y, 'k'); hold on
+    plot(t_out, y, syms(i)); hold on
     ax = gca;
     ax.FontSize = 13; 
     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
@@ -517,8 +589,113 @@ for i=1:length(k_i)
 %     grid on;
 %     axis tight
     
-    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta);
-    Gms_p(i) = Gm; Pms_p(i) = Pm; wp_p(i) = Wcp; 
+    % Calculo de margenes de ganancia y fase
+    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
+    Gms_i(i) = Gm; Pms_i(i) = Pm; wp_i(i) = Wcp; 
+    
+    % Calculo de Tiempos característicos
+    [tr,td] = Utils.getTimesRD(y,t);
+    fprintf("Kp = "+ k_p + ", Kd = " + k_d + ", Ki = " + k_i(i) + "\n");
+    fprintf("Rise Time: " + num2str(tr) + " s\n");
+    fprintf("Time Delay: " + num2str(td) + " s\n");
+end
+
+set(0, 'CurrentFigure', f_step)
+    grid minor
+    hold on
+    box on
+set(0, 'CurrentFigure', f_nichols)
+    grid minor
+    hold on
+    box on
+    
+
+% 3) Derivativo
+
+lims = [1e-2 1e2];
+
+% Valores PID
+k_p = -3;
+k_i = -0.2;
+k_d = [0,-0.01,-0.02,-0.05,-0.1,-0.2];
+Gs_theta = 1;
+
+% Margenes y fases
+
+Gms_d = zeros(1,length(k_i));
+Pms_d = zeros(1,length(k_i));
+wp_d = zeros(1,length(k_i));
+
+
+f_nichols = figure;
+f_step = figure('Position', [100, 100, 600, 420]);
+
+nopts = nicholsoptions;
+	nopts.PhaseMatching = 'on';
+	nopts.PhaseMatchingFreq = lims(1);
+	nopts.PhaseMatchingValue = 0;
+    
+	nopts.XLabel.String = '$\phi(\omega)$';
+	nopts.XLabel.FontSize = 13;
+	nopts.XLabel.Interpreter = 'latex';
+    
+	nopts.YLabel.FontSize = 13;
+	nopts.YLabel.Interpreter = 'latex';
+    
+	nopts.Title.FontSize = 14;
+	nopts.Title.Interpreter = 'latex';
+    
+    nopts.YLabel.String = Magnames_latex(3);
+    nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
+
+set(0, 'CurrentFigure', f_step)
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+%     axes('Position',[.67 .73 .15 .15]); hold on
+%     box on; % put box around new pair of axes
+
+for i=1:length(k_d)
+    
+    PID_AP = pid(k_p,k_i,k_d(i));
+    Gap_theta = Utils.craftAP(PID_AP,plane_cont.lon.Cont.Galphadeltae/K_DL,Gs_theta);
+    Gap_theta_ol = PID_AP*(plane_cont.lon.Cont.Galphadeltae/K_DL);
+    
+    % Nichols plotting
+    set(0, 'CurrentFigure', f_nichols)
+    nicholsplot(Gap_theta_ol, {lims(1), lims(2)}, nopts, syms(i)); hold on
+    
+    % Step Plotting
+    set(0, 'CurrentFigure', f_step)
+    % Transitorio
+    t = 0:0.05:tsimtr(4);
+    u = max(0,min(amp/tramp*(t),amp));
+    [y, t_out, ~] = lsim(Gap_theta, u, t);
+    plot(t_out, y, syms(i)); hold on
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    
+        % Zoom en perturbación
+%     ax2.indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
+%     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+%     grid on;
+%     axis tight
+    
+    %Calculo de margenes de ganancia y fase
+    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
+    Gms_d(i) = Gm; Pms_d(i) = Pm; wp_d(i) = Wcp; 
+    
+    % Calculo de Tiempos característicos
+    [tr,td] = Utils.getTimesRD(y,t);
+    fprintf("Kp = "+ k_p + ", Kd = " + k_d(i) + ", Ki = " + k_i + "\n");
+    fprintf("Rise Time: " + num2str(tr) + " s\n");
+    fprintf("Time Delay: " + num2str(td) + " s\n");
 end
 
 set(0, 'CurrentFigure', f_step)

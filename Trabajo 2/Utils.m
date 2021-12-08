@@ -256,6 +256,9 @@ classdef Utils
                 [ymax,imax] = min(y);
                 m = -1;
             end
+            if(imax == length(y))
+                imax = imax - 1;
+            end
             for i = 1:imax
                 % Time delay calc
                 if i <= imax
