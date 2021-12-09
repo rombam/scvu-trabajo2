@@ -1,5 +1,5 @@
 %% Simulink Validation
-close all, clear all;
+close all;
 
 plane_OL = Plane(GlobalHawk);
 
@@ -82,3 +82,26 @@ Gp_u_deltae_num = cell2mat(Gp_u_deltae_num); Gp_u_deltae_den = cell2mat(Gp_u_del
 Gp_alpha_deltae_num = cell2mat(Gp_alpha_deltae_num); Gp_alpha_deltae_den = cell2mat(Gp_alpha_deltae_den);
 Gp_theta_deltae_num = cell2mat(Gp_theta_deltae_num); Gp_theta_deltae_den = cell2mat(Gp_theta_deltae_den);
 Gp_q_deltae_num = cell2mat(Gp_q_deltae_num); Gp_q_deltae_den = cell2mat(Gp_q_deltae_den);
+
+
+plane_cont = Plane(GlobalHawk);
+
+% Ganancias de realimentación
+Kalpha = 2;
+Kq = -0.2;
+Ga_deltae = G_a_deltae;
+plane_cont.lon.Cont.Gudeltae = (Ga_deltae*plane_cont.lon.G.Gudeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
+plane_cont.lon.Cont.Galphadeltae = (Ga_deltae*plane_cont.lon.G.Galphadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
+plane_cont.lon.Cont.Gthetadeltae = (Ga_deltae*plane_cont.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
+plane_cont.lon.Cont.Gqdeltae = (Ga_deltae*plane_cont.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
+
+
+GSAS_u = plane_cont.lon.Cont.Gudeltae;
+GSAS_alpha = plane_cont.lon.Cont.Galphadeltae;
+GSAS_theta = plane_cont.lon.Cont.Gthetadeltae;
+GSAS_q = plane_cont.lon.Cont.Gqdeltae;
+                                 
