@@ -50,7 +50,7 @@ plane_OL = Plane(GlobalHawk);
 % libro en false
 % Si save = true, guarda gráficas en formato .eps en ./Graficas/Lon/
 
-dim = true;
+dim = false;
 save = false;
 
 varnames = ["udeltae"; "alphadeltae"; "thetadeltae"; "qdeltae"];
@@ -347,35 +347,38 @@ plane_cont.lon.Cont.Gthetadeltae = (Ga_deltae*plane_cont.lon.G.Gthetadeltae.Gfac
 plane_cont.lon.Cont.Gqdeltae = (Ga_deltae*plane_cont.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
                                      Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
 
+                                 
+GSAS_u =  plane_cont.lon.Cont.Gudeltae;
+GSAS_alpha =  plane_cont.lon.Cont.Galphadeltae;
 GSAS_theta = plane_cont.lon.Cont.Gthetadeltae;
+GSAS_q =  plane_cont.lon.Cont.Gqdeltae;
 
                                  
-%% -- 6.1. Diseño AP: Root Locus (MIRAR ESTO QUE CREO QUE ESTA MAL)
+%% -- 6.1. Diseño AP: Root Locus
 
 % Valores PID
-k_p = [-0.05,-0.1,-0.15,-0.2,-0.5,-1,-2,-5];
-k_i = [0,-0.01,-0.02,-0.05,-0.1,-0.2,-0.5,-1];
+k_p = [-0.1,-0.2,-0.5,-1,-2,-5];
+k_i = [0,-0.01,-0.1,-0.2,-0.5,-1];
 k_d = 0; % Lo ponemos a cero porque basicamente no afecta demasiado a la estabilidad del sistema
+Gs_theta = Utils.padeTF();
 
-% base
 figure
-polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
+polesAUX = pole(GSAS_theta);
 poles_SP_0 = polesAUX(1);
 plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
 hold on
 plot(-10,0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
 xlabel('Re(s)','Interpreter','latex')
 ylabel('Im(s)','Interpreter','latex')
-xlim([-15 3])
-ylim([-20 20])
+xlim([-20 3])
+ylim([-14 14]) 
 hold on
 grid minor
 
-Gs_theta = 1;
-
 for i=1:length(k_p)
-    for j=1:length(k_i)             
+    for j=1:length(k_i)
         % -- Ensamblaje de la FT en lazo cerrado --
+        s = tf('s');
         PID_AP = pid(k_p(i),k_i(j),k_d);
         Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
         polesAUX = round(pole(Gap_theta),4);
@@ -383,31 +386,29 @@ for i=1:length(k_p)
         % Quita a la lista de polos los ceros que sean iguales a estos.
         % Para eliminar los polos residuales de la planta libre.
         polesAUXclean = setdiff(polesAUX,zerosAUX);
-        if k_p(i)==0 && k_i(j)==0
+        if k_i(i) == 0
+            marker = '^';
         else
-            if k_p(i) < 0
-                marker = 's';
+            marker = 's';
+        end
+        color = 'w';
+        for k=1:length(polesAUXclean)
+            % -- Bucle en todos los polos --
+            % Filtramos los polos cerca del origen (modo fugoide) a
+            % mano. Mejorable.
+            if abs(imag(polesAUXclean(k))) >= 0.3
+                plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+                hold on
+            elseif abs(real(polesAUXclean(k))) >= 0.15
+                plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+                hold on
+            elseif abs(real(polesAUXclean(k))) >= 10
             else
-                marker = '^';
-            end
-            for k=1:length(polesAUXclean)
-                % -- Bucle en todos los polos --
-                % Filtramos los polos cerca del origen (modo fugoide) a
-                % mano. Mejorable.
-                if abs(imag(polesAUXclean(k))) >= 0.3
-                    plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
-                    hold on
-                elseif abs(real(polesAUXclean(k))) >= 0.15
-                    plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
-                    hold on
-                else
-                end
             end
         end
     end
 end
-sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
-
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
 
 
 
@@ -471,7 +472,7 @@ for i=1:length(k_p)
     
     PID_AP = pid(k_p(i),k_i,k_d);
     Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
-    Gap_theta_ol = PID_AP*(GSAS_theta);
+    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
     
     % Nichols plotting
     set(0, 'CurrentFigure', f_nichols)
@@ -523,7 +524,7 @@ set(0, 'CurrentFigure', f_nichols)
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = -0.2;
+k_p = -0.6;
 k_i = [0,-0.01,-0.02,-0.05,-0.2];
 k_d = 0;
 Gs_theta = Utils.padeTF();
@@ -570,7 +571,7 @@ for i=1:length(k_i)
     
     PID_AP = pid(k_p,k_i(i),k_d);
     Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
-    Gap_theta_ol = PID_AP*(GSAS_theta);
+    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
     
     % Nichols plotting
     set(0, 'CurrentFigure', f_nichols)
@@ -620,16 +621,16 @@ set(0, 'CurrentFigure', f_nichols)
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = -1;
+k_p = -0.6;
 k_i = -0.2;
 k_d = [0,-0.05,-0.2];
 Gs_theta = Utils.padeTF();
 
 % Margenes y fases
 
-Gms_d = zeros(1,length(k_i));
-Pms_d = zeros(1,length(k_i));
-wp_d = zeros(1,length(k_i));
+Gms_d = zeros(1,length(k_d));
+Pms_d = zeros(1,length(k_d));
+wp_d = zeros(1,length(k_d));
 
 
 f_nichols = figure;
@@ -676,7 +677,7 @@ for i=1:length(k_d)
     
     PID_AP = pid(k_p,k_i,k_d(i));
     Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
-    Gap_theta_ol = PID_AP*(GSAS_theta);
+    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
     
     % Nichols plotting
     set(0, 'CurrentFigure', f_nichols)
@@ -735,5 +736,98 @@ set(0, 'CurrentFigure', f_nichols)
 
 
 %% --6.3 Respuestas del resto de variables al AP
+
+k_p = -0.6;
+k_i = -0.2;
+k_d = -0.05;
+
+% Definir rampa
+tsimtr = [150 50 150 100];    % Tiempo total de simulación - transitorio [s]
+tsimst = [500 500 500 500];   % Tiempo total de simulación - estacionario [s]
+tramp  = 5;                   % Tiempo de rampeo [s]
+amp    = 1;                   % Amplitud de la rampa [º]
+delay = 0.1;                  % Delay del actuador
+
+PID_AP = pid(k_p,k_i,k_d);
+Gs_theta = Utils.padeTF();
+load('Gaps.mat');
+GSASs = [Gap_u,Gap_alpha,GSAS_theta,Gap_q];
+
+fprintf("--------- Tiempos Característicos AP para cada variable -----------\n");
+
+for i = 1:length(varnames)
+    fig = figure('Position', [100, 100, 1120, 420]);
+    
+    if(i == 3)
+        Gap = feedback(GSASs(i)*PID_AP,Gs_theta);
+    else
+        Gap = GSASs(i);
+    end
+    % Transitorio
+    subplot(1, 2, 1)
+    hold on
+    t = 0:0.05:tsimtr(i);
+    u = max(0,min(amp/tramp*(t),amp));
+    grid minor
+    hold on
+    box on
+    [y, t_out, ~] = lsim(Gap*scales(i), u, t);
+    plot(t_out, y, 'k')
+    if i==1
+        hold on
+        plot(t,u,'k-.')
+    end
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+    
+    % Zoom en perturbación
+
+    axes('Position',[.30 .67 .15 .15])
+    box on; % put box around new pair of axes
+    indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
+    plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+    grid on;
+    axis tight
+    
+    % Estacionario
+    subplot(1, 2, 2)
+    t = 0:0.05:tsimst(i);
+    u = max(0,min(amp/tramp*(t),amp));
+    grid minor
+    hold on
+    box on
+    [y, t_out, ~] = lsim(Gap*scales(i), u, t);
+    plot(t_out, y, 'k')
+    if i==1
+        hold on
+        plot(t,u,'k-.')
+        legend('Respuesta', '$\Delta \delta_e$', 'Interpreter', 'latex')
+    end
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Estacionario','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+
+    if (save == false)
+        sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
+    else
+        sgtitle("")
+        saveas(gcf,strcat("Graficas/Lon/Ramp_", varnames(i)),'eps')
+    end
+    
+    % Rise Time and Time Delay Calculation and printing in console
+    
+    [tr,td] = Utils.getTimesRD(y,t);
+    fprintf(varnames(i) + "\n");
+    fprintf("Rise Time: " + num2str(tr) + " s\n");
+    fprintf("Time Delay: " + num2str(td) + " s\n");
+
+end
 
 
