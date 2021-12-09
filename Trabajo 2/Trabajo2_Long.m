@@ -196,12 +196,13 @@ end
 %% -- 3. Análisis de sensibilidad de la planta libre --
 % Análisis del lugar de las raíces del modo de corto periodo
 % Tarda mucho, ejecutar solo si es necesario.
-
+clear
+plane_OL  = Plane(GlobalHawk);
 plane_Aux = Plane(GlobalHawk);
 
 % Factores de multiplicidad Cmalpha y Cmq
-F_alpha  = [-0.5 0 0.5 1 2 3];
-F_q      = [-1 0 1 2 4 5];
+F_alpha  = [-0.5 0 0.5 1 2 3 4];
+F_q      = [-0.5 0 0.5 1 2 3 4];
 poles_SP = zeros(length(F_alpha),length(F_q));
 
 % Root locus
@@ -209,15 +210,10 @@ figure
 polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
 poles_SP_0 = polesAUX(1);
 plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
-%set(gca,'linewidth',1)
 xlabel('Re(s)','Interpreter','latex')
 ylabel('Im(s)','Interpreter','latex')
 xlim([-10 5])
-ylim([-17 17])
-ax=gca;
-ax.FontSize = 16;
-%ax.YTickLabel.fontsize = 16;
-%ax.XTickLabel.fontsize = 16;
+ylim([-18 18])
 hold on
 grid minor
 
@@ -241,10 +237,6 @@ for i=1:length(F_alpha)
     end
 end
 sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
-quiver(-1.95, -4, 0, 3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
-quiver(-1.95, 4, 0, -3.5, 'k', 'AutoScale', 0, 'MaxHeadSize',0.7)
-quiver(-3.5, 0, -1.25, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
-quiver(-0.5, 0, 1.4, 0, 'k', 'AutoScale', 0, 'MaxHeadSize',10)
 
 %% -- 4. Barrido de ganancias de realimentación --
 % WORK IN PROGRESS
@@ -261,13 +253,14 @@ Gs_alpha = 1;
 Gs_q = 1;
 Gthetadeltae_pl = plane_OL.lon.G.Gthetadeltae.Gfact;
 Galphadeltae_pl = plane_OL.lon.G.Galphadeltae.Gfact;
+Gqdeltae_pl     = plane_OL.lon.G.Gqdeltae.Gfact;
 K_DL = 1/plane_OL.lon.G.Gthetadeltae.K;
 
 % Factores de multiplicidad Cmalpha y Cmq
 F_alpha  = [-0.5 -0.2 0 0.5 1 2 3 4];
 %F_alpha = 1;
-%F_q      = [-0.5 -0.2 0 0.5 1 2 3 4];
-F_q = 1;
+F_q      = [-0.5 -0.2 0 0.5 1 2 3 4];
+%F_q = 1;
 Kalpha   = - (F_alpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
 Kq       = - (F_q-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
 poles_SP = zeros(length(Kalpha),length(Kq));
@@ -283,7 +276,7 @@ plot(-10,0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
 xlabel('Re(s)','Interpreter','latex')
 ylabel('Im(s)','Interpreter','latex')
 xlim([-20 3])
-ylim([-20 20])
+ylim([-14 14]) 
 hold on
 grid minor
 
@@ -305,23 +298,30 @@ for i=1:length(Kalpha)
             else
                 marker = '^';
             end
+            color = 'w';
+            if Kq(j) < 0
+                color = 'w';
+            else
+                color = [197/255 197/255 197/255];
+            end
             for k=1:length(polesAUXclean)
                 % -- Bucle en todos los polos --
                 % Filtramos los polos cerca del origen (modo fugoide) a
                 % mano. Mejorable.
                 if abs(imag(polesAUXclean(k))) >= 0.3
-                    plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
+                    plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
                     hold on
                 elseif abs(real(polesAUXclean(k))) >= 0.15
-                    plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
+                    plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
                     hold on
+                elseif abs(real(polesAUXclean(k))) >= 10
                 else
                 end
             end
         end
     end
 end
-sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
 
 %% -- 5. Diseño del SAS --
 plane_cont = Plane(GlobalHawk);
