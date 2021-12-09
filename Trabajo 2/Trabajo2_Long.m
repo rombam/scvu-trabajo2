@@ -419,7 +419,7 @@ tsimst = [500 500 500 500];   % Tiempo total de simulación - estacionario [s]
 tramp  = 5;                   % Tiempo de rampeo [s]
 amp    = 1;                   % Amplitud de la rampa [º]
 
-syms = ['-','--',':','-.','-','.'];
+syms = ["-","--",":","-.","-","--"];
 
 % Barrido PID
 
@@ -475,7 +475,7 @@ for i=1:length(k_p)
     
     % Nichols plotting
     set(0, 'CurrentFigure', f_nichols)
-    nicholsplot(Gap_theta_ol, {lims(1), lims(2)},nopts, syms(i)); hold on
+    nicholsplot(Gap_theta_ol, {lims(1), lims(2)},nopts); hold on
     
     % Step Plotting
     set(0, 'CurrentFigure', f_step)
@@ -484,7 +484,7 @@ for i=1:length(k_p)
     u = max(0,min(amp/tramp*(t),amp));
     [y, t_out, ~] = lsim(Gap_theta, u, t);
     hold(ax,'on');
-    plot(t_out,y,syms(i),'Color','k'); hold on
+    plot(t_out,y,'LineStyle',syms(i),'Color','k'); hold on
     if(i == 1)
         text(t(end)*0.75,y(end)*1.1,'$[k_{\delta_{e} \theta}]_P$' + " = " + num2str(k_p(i)),'FontSize',10,'Interpreter','latex');hold on
     else
@@ -523,8 +523,8 @@ set(0, 'CurrentFigure', f_nichols)
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = -0.15;
-k_i = [0,-0.01,-0.02,-0.05,-0.1,-0.2];
+k_p = -0.2;
+k_i = [0,-0.01,-0.02,-0.05,-0.2];
 k_d = 0;
 Gs_theta = Utils.padeTF();
 
@@ -582,12 +582,7 @@ for i=1:length(k_i)
     t = 0:0.05:tsimtr(4);
     u = max(0,min(amp/tramp*(t),amp));
     [y, t_out, ~] = lsim(Gap_theta, u, t);
-    plot(t_out, y, syms(i)); hold on
-     if(i == 1)
-        text(t(end)*0.75,y(end)*1.1,'$[k_{\delta_{e} \theta}]_I$' + " = " + num2str(k_i(i)),'FontSize',10,'Interpreter','latex');hold on
-    else
-        text(t(end)*0.75,y(end)*1.1,num2str(k_i(i)),'FontSize',10,'Interpreter','latex');hold on
-    end
+    plot(t_out, y, syms(i),'Color','k'); hold on
     ax = gca;
     ax.FontSize = 13; 
     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
@@ -625,9 +620,9 @@ set(0, 'CurrentFigure', f_nichols)
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = -0.15;
-k_i = -0.1;
-k_d = [0,-0.01,-0.02,-0.05,-0.1,-0.2];
+k_p = -1;
+k_i = -0.2;
+k_d = [0,-0.05,-0.2];
 Gs_theta = Utils.padeTF();
 
 % Margenes y fases
@@ -693,7 +688,7 @@ for i=1:length(k_d)
     t = 0:0.05:tsimtr(4);
     u = max(0,min(amp/tramp*(t),amp));
     [y, t_out, ~] = lsim(Gap_theta, u, t);
-    plot(t_out, y, syms(i)); hold on
+    plot(t_out, y,syms(i),'Color','k'); hold on
     ax = gca;
     ax.FontSize = 13; 
     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
@@ -704,11 +699,6 @@ for i=1:length(k_d)
     u = max(0,min(amp/tramp*(t),amp));
     [y, t_out, ~] = lsim(Gap_theta, u, t);
     plot(t_out, y, syms(i)); hold on
-    if(i == 1)
-        text(t(end)*0.85,y(end)*1.1,'$[k_{\delta_{e} \theta}]_D$' + " = " + num2str(k_d(i)),'FontSize',10,'Interpreter','latex');hold on
-    else
-        text(t(end)*0.85,y(end)*1.1,num2str(k_d(i)),'FontSize',10,'Interpreter','latex');hold on
-    end
     ax = gca;
     ax.FontSize = 13; 
     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
