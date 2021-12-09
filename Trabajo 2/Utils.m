@@ -279,12 +279,6 @@ classdef Utils
             [dy_max,i_tmax] = max(abs(dy));
             t_d = t(i_tmax) - m*(y(i_tmax)/dy_max);
         end
-            
-     %% ------- AUTOPILOT CALCULATOR -------
-     
-     function Gapcl = craftAP(pid,Gsas,Gs)
-         Gapcl = (pid*Gsas)/(1+pid*Gsas*Gs);
-     end
     end
 end
 
