@@ -51,7 +51,7 @@ plane_OL = Plane(GlobalHawk);
 % Si save = true, guarda gráficas en formato .eps en ./Graficas/Lon/
 
 dim = true;
-save = false;
+save = true;
 
 varnames = ["udeltae"; "alphadeltae"; "thetadeltae"; "qdeltae"];
 Gnames = strcat('G', varnames);
@@ -147,8 +147,11 @@ for i = 1:length(varnames)
     ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
     
     % Zoom en perturbación
-
-    axes('Position',[.30 .67 .15 .15])
+    if i ~=2
+        axes('Position',[.30 .67 .15 .15])
+    else
+        axes('Position',[.30 .20 .15 .15])
+    end
     box on; % put box around new pair of axes
     indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
     plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
@@ -178,10 +181,11 @@ for i = 1:length(varnames)
     plane_OL.lon.G.(genvarname(Gnames(i))).ramp = lsiminfo(y, t_out);
 
     if save == false
-        sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
+        sgtitle("")
+        %sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
     else
         sgtitle("")
-        saveas(gcf,strcat("Graficas/Lon/Ramp_", varnames(i)),'eps')
+        saveas(gcf,strcat("Graficas/SAS/Ramp_PL_", varnames(i)),'eps')
     end
     
     % Rise Time and Time Delay Calculation and printing in console
@@ -203,17 +207,16 @@ plane_Aux = Plane(GlobalHawk);
 % Factores de multiplicidad Cmalpha y Cmq
 F_alpha  = [-0.5 0 0.5 1 2 3 4];
 F_q      = [-0.5 0 0.5 1 2 3 4];
-poles_SP = zeros(length(F_alpha),length(F_q));
 
 % Root locus
-figure
+figure('Position', [10 10 900 400])
 polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
 poles_SP_0 = polesAUX(1);
 plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
 xlabel('Re(s)','Interpreter','latex')
 ylabel('Im(s)','Interpreter','latex')
 xlim([-10 5])
-ylim([-18 18])
+ylim([-19.5 19.5])
 hold on
 grid minor
 
@@ -223,23 +226,27 @@ for i=1:length(F_alpha)
         plane_Aux.model.Cm.q = plane_OL.model.Cm.q*F_q(j);
         plane_Aux = plane_Aux.recalc;
         polesAUX = pole(plane_Aux.lon.G.Galphadeltae.Gfact);
-        poles_SP(i,j) = polesAUX(1);
+        poles_SP{i,j} = polesAUX;
+        color = 'w';
+        marker = 's';
         if F_alpha(i)==1 && F_q(j)==1
         else
-            if imag(poles_SP(i,j)) ~= 0
-                plot([poles_SP(i,j) conj(poles_SP(i,j))],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')
-                hold on
-            else
-                plot([poles_SP(i,j) 2*real(poles_SP_0)-poles_SP(i,j)],[0 0],'s','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','w')    
-                hold on
+            for k=1:length(polesAUX)
+                if abs(imag(polesAUX(k))) > 0
+                    plot(polesAUX(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+                    hold on
+        
+                else
+                    plot(polesAUX(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+                    hold on
+                end
             end
         end
     end
 end
-sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20])
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
 
 %% -- 4. Barrido de ganancias de realimentación --
-% WORK IN PROGRESS
 % Análisis del lugar de las raíces del modo de corto periodo con
 % realimentación en alpha y q.
 % Análisis de la función de transferencia de deltae a theta en lazo
@@ -267,16 +274,17 @@ poles_SP = zeros(length(Kalpha),length(Kq));
 
 % Root locus. Ploteamos primero el corto periodo y el polo del actuador
 % base
-figure
+figure('Position', [10 10 900 500])
 polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
 poles_SP_0 = polesAUX(1);
-plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',14,'MarkerEdgeColor','k','MarkerFaceColor','w')
 hold on
-plot(-10,0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
-xlabel('Re(s)','Interpreter','latex')
-ylabel('Im(s)','Interpreter','latex')
-xlim([-20 3])
-ylim([-14 14]) 
+plot(-10,0,'x','MarkerSize',14,'MarkerEdgeColor','k','MarkerFaceColor','w')
+xlabel('Re(s)','Interpreter','latex','FontSize', 14)
+ylabel('Im(s)','Interpreter','latex','FontSize', 14)
+set(gca,'TickLabelInterpreter','latex')
+xlim([-18 3])
+ylim([-16 16]) 
 hold on
 grid minor
 
@@ -308,20 +316,37 @@ for i=1:length(Kalpha)
                 % -- Bucle en todos los polos --
                 % Filtramos los polos cerca del origen (modo fugoide) a
                 % mano. Mejorable.
-                if abs(imag(polesAUXclean(k))) >= 0.3
+%                 if abs(imag(polesAUXclean(k))) >= 0.3
+%                     plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+%                     hold on
+%                 elseif abs(real(polesAUXclean(k))) >= 0.15
+%                     plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+%                     hold on
+                if abs(imag(polesAUXclean(k))) > 1
                     plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
                     hold on
-                elseif abs(real(polesAUXclean(k))) >= 0.15
-                    plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
-                    hold on
-                elseif abs(real(polesAUXclean(k))) >= 10
-                else
+
+                elseif real(polesAUXclean(k)) < -1
+                    if real(polesAUXclean(k)) == -10
+                    else
+                        plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+                        hold on
+                    end
                 end
             end
         end
     end
 end
 sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
+h = zeros(5, 1);
+h(1) = plot(NaN,NaN,'x','MarkerEdgeColor','k');
+h(2) = plot(NaN,NaN,'s','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(3) = plot(NaN,NaN,'s','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+h(4) = plot(NaN,NaN,'^','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(5) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+legend(h, 'Planta libre','$k_{\delta_e \alpha} < 0$, $k_{\delta_e q} < 0$','$k_{\delta_e \alpha} < 0$, $k_{\delta_e q} >= 0$',...
+                           '$k_{\delta_e \alpha} >= 0$, $k_{\delta_e q} < 0$','$k_{\delta_e \alpha} >= 0$, $k_{\delta_e q} >= 0$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
+
 
 %% -- 5. Diseño del SAS --
 plane_cont = Plane(GlobalHawk);
