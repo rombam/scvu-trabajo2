@@ -2,53 +2,53 @@
 %                            SCVu 2021-2022                               %
 %                          TRABAJO 2. GRUPO 04                            %
 % ----------------------------------------------------------------------- %  
-% Dise�o de un sistema de aumento de estabilidad y un autopiloto para el
+% Diseño de un sistema de aumento de estabilidad y un autopiloto para el
 % RPAS Global Hawk. Canal longitudinal.
 
 clear, clc, close all
 
-% ------ DESCRIPCI�N DEL C�DIGO ------
+% ------ DESCRIPCION DEL CODIGO ------
 
 % - GlobalHawk.m/Learjet24.m : contienen las derivadas de estabilidad de
-% dichos aviones. Global Hawk es el avi�n del Trabajo 1 y Learjet 24 se us�
+% dichos aviones. Global Hawk es el avion del Trabajo 1 y Learjet 24 se uso
 % para comparar con el libro Leyes de Control de Vuelo (FTs/respuestas
 % adimensionales).
 
 % - PLANE.M: crea una clase a partir de las subclases anteriores para
 % modelos de aviones concretos que proyecta las derivadas en ejes adecuados 
 % y llama al resto de funciones para operar sobre ellas (obtener funciones 
-% de transferencia, factorizarlas, etc.). Es la parte m�s importante.
+% de transferencia, factorizarlas, etc.). Es la parte mas importante.
 % Para chequear funciones de transferencia: plane.lon/lat.G.Gsalidaentrada,
-% dentro est�n todos los par�metros de cada funci�n de transferencia.
-% NOTA: por defecto las K est�n en forma adimensional. Para obtenerlas en
+% dentro estan todos los parametros de cada funcion de transferencia.
+% NOTA: por defecto las K estan en forma adimensional. Para obtenerlas en
 % forma dimensional como K_dim, correr los puntos 1 de este script para
 % longitudinal y lateral-direccional.
-% NOTA 2: para obtener los par�metros de respuesta (overshoot, m�ximos,
-% m�nimos, settling time...) hay que ejecutar los apartados de respuesta a
-% escal�n y rampa (5 y 6 de longitudinal y lateral-direccional).
+% NOTA 2: para obtener los parametros de respuesta (overshoot, maximos,
+% minimos, settling time...) hay que ejecutar los apartados de respuesta a
+% escalon y rampa (5 y 6 de longitudinal y lateral-direccional).
 
-% - Dynamics.m: contiene los sistemas de ecuaciones din�micos para cada
-% canal por separado. Resuelve las ecuaciones por el m�todo de Cramer y
+% - Dynamics.m: contiene los sistemas de ecuaciones dinamicos para cada
+% canal por separado. Resuelve las ecuaciones por el metodo de Cramer y
 % devuelve las funciones de transferencia separadas por canal, entrada y
 % salida, factorizadas y con los datos de polos, ceros y ganancias.
 
-% - Utils.m: recoge funciones de utilidad variada (conversi�n de unidades,
-% ISA, factorizaci�n de funciones de transferencia, etc.).
+% - Utils.m: recoge funciones de utilidad variada (conversion de unidades,
+% ISA, factorizacion de funciones de transferencia, etc.).
 
-%% ------ Creaci�n del modelo din�mico y obtenci�n de FTs ------
+%% ------ Creacion del modelo dinamico y obtencion de FTs ------
 plane_OL = Plane(GlobalHawk);
 
 %% -------------------- CANAL LONGITUDINAL ---------------------
 % -- 1. FTs adimensionales: contenidas en plane.lon.G --
-% A�adir un factor de escala a cada FT para tener en cuenta las unidades.
+% Añadir un factor de escala a cada FT para tener en cuenta las unidades.
 
 % - Dimensiones -
-% Si dim = false, todo adimensional y �ngulos en radianes
-% Si dim = true, velocidad en m/s y �ngulos en grados
-% Se ajustan los factores de escala (scales) y los t��tulos de los diagramas
+% Si dim = false, todo adimensional y angulos en radianes
+% Si dim = true, velocidad en m/s y angulos en grados
+% Se ajustan los factores de escala (scales) y los titulos de los diagramas
 % Para el trabajo, debe estar por defecto en true. Para comparar con el
 % libro en false
-% Si save = true, guarda gr�ficas en formato .eps en ./Graficas/Lon/
+% Si save = true, guarda graficas en formato .eps en ./Graficas/Lon/
 
 dim = true;
 save = true;
@@ -58,7 +58,7 @@ Gnames = strcat('G', varnames);
 
 if dim == false
     scales = [1; 1; 1; 1];
-    % - Par�metros diagramas de Bode/Nichols - 
+    % - Parametros diagramas de Bode/Nichols - 
     Magnames_latex  = ["$\left | G_{\hat{u} \delta_{e}}(i\omega) \right |$";...
                        "$\left | G_{\alpha \delta_{e}}(i\omega) \right |$";...
                        "$\left | G_{\theta \delta_{e}}(i\omega) \right |$";...
@@ -68,23 +68,23 @@ if dim == false
                        "$G_{\theta \delta_{e}}(i\omega)$";...
                        "$G_{\hat{q} \delta_{e}}(i\omega)$"];
                 
-    % - Par�metros gr�ficas de respuesta -
+    % - Parametros graficas de respuesta -
     Respnames_latex = ["$\Delta \hat{u}$ [-]";...
                        "$\Delta \alpha$ [rad]";...
                        "$\Delta \theta$ [rad]";...
                        "$\Delta \hat{q}$ [-]"];
     angleunits      = '\hspace{0.75 mm}rad$';
 elseif dim == true
-	scales = [plane_OL.FC.us/(180/pi);...  % Velocidad/�ngulo
-              1;...                     % �ngulo/�ngulo
-              1;...                     % �ngulo/�ngulo
-              1/plane_OL.lon.t_lon];       % Vel.angular/�ngulo (tiempo)
+	scales = [plane_OL.FC.us/(180/pi);...  % Velocidad/angulo
+              1;...                     % Angulo/angulo
+              1;...                     % Angulo/angulo
+              1/plane_OL.lon.t_lon];       % Vel.angular/angulo (tiempo)
 
     for i=1:length(scales)
         plane_OL.lon.G.(genvarname(Gnames(i))).K_dim = plane_OL.lon.G.(genvarname(Gnames(i))).K * scales(i);
     end
 
-    % - Par�metros diagramas de Bode/Nichols - 
+    % - Parametros diagramas de Bode/Nichols - 
     Magnames_latex  = ["$\left | G_{u \delta_{e}}(i\omega) \right |$";...
                        "$\left | G_{\alpha \delta_{e}}(i\omega) \right |$";...
                        "$\left | G_{\theta \delta_{e}}(i\omega) \right |$";...
@@ -94,7 +94,7 @@ elseif dim == true
                        "$G_{\theta \delta_{e}}(i\omega)$";...
                        "$G_{q \delta_{e}}(i\omega)$"];
                 
-    % - Par�metros gr�ficas de respuesta -
+    % - Parametros graficas de respuesta -
     Respnames_latex = ["$\Delta u$ [m/s]";...
                        "$\Delta \alpha$ [$^\circ$]";...
                        "$\Delta \theta$ [$^\circ$]";...
@@ -102,24 +102,23 @@ elseif dim == true
     angleunits      = '^{\circ}$';
 end
 
-%% -- 2. Aplicaci�n de ley de control directo
+%% -- 2. Aplicacion de ley de control directo
 
 % Esquema: delta --> K_DL --> G_actuador --> G_longitudinal --> variable
 % Definir rampa
-tsimtr = [150 50 150 100];    % Tiempo total de simulaci�n - transitorio [s]
-tsimst = [500 500 500 500];   % Tiempo total de simulaci�n - estacionario [s]
+tsimtr = [150 50 150 100];    % Tiempo total de simulacion - transitorio [s]
+tsimst = [500 500 500 500];   % Tiempo total de simulacion - estacionario [s]
 tramp  = 5;                   % Tiempo de rampeo [s]
-amp    = 1;                   % Amplitud de la rampa [�]
-delay = 0.1;                  % Delay del actuador
-G_a = Utils.padeTF(delay);
+amp    = 1;                   % Amplitud de la rampa [deg]
+G_a = Utils.forlagTF;
 
-% Se seleccionar� una ganancia de Direct-Link que proporcione un incremento
-% de �ngulo de asiento de 1� por cada grado de deflexi�n del mando de cabeceo
+% Se seleccionara una ganancia de Direct-Link que proporcione un incremento
+% de angulo de asiento de 1 grado por cada grado de deflexion del mando de cabeceo
 
 K_dl = 1/plane_OL.lon.G.Gthetadeltae.K; % Calculamos el K_DL para theta
 
 
-fprintf("--------- Tiempos Caracter�sticos Lazo Abierto con K_dl + Gact + Gp -----------\n");
+fprintf("--------- Tiempos Caracteristicos Lazo Abierto con K_dl + Gact + Gp -----------\n");
 
 for i = 1:length(varnames)
     fig = figure('Position', [100, 100, 1120, 420]);
@@ -146,7 +145,7 @@ for i = 1:length(varnames)
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
     ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
     
-    % Zoom en perturbaci�n
+    % Zoom en perturbacion
     if i ~=2
         axes('Position',[.30 .67 .15 .15])
     else
@@ -191,14 +190,15 @@ for i = 1:length(varnames)
     % Rise Time and Time Delay Calculation and printing in console
     
     [tr,td] = Utils.getTimesRD(y,t);
+    TrTd_Kdl{i} = [tr,td];
     fprintf(varnames(i) + "\n");
     fprintf("Rise Time: " + num2str(tr) + " s\n");
     fprintf("Time Delay: " + num2str(td) + " s\n");
 
 end
 
-%% -- 3. An�lisis de sensibilidad de la planta libre --
-% An�lisis del lugar de las ra�ces del modo de corto periodo
+%% -- 3. Analisis de sensibilidad de la planta libre --
+% Analisis del lugar de las raices del modo de corto periodo
 % Tarda mucho, ejecutar solo si es necesario.
 clear
 plane_OL  = Plane(GlobalHawk);
@@ -246,10 +246,10 @@ for i=1:length(F_alpha)
 end
 sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
 
-%% -- 4. Barrido de ganancias de realimentaci�n --
-% An�lisis del lugar de las ra�ces del modo de corto periodo con
-% realimentaci�n en alpha y q.
-% An�lisis de la funci�n de transferencia de deltae a theta en lazo
+%% -- 4. Barrido de ganancias de realimentacion --
+% Analisis del lugar de las raices del modo de corto periodo con
+% realimentacion en alpha y q.
+% Analisis de la funcion de transferencia de deltae a theta en lazo
 % cerrado.
 clear
 plane_OL = Plane(GlobalHawk);
@@ -261,12 +261,14 @@ Gs_q = 1;
 Gthetadeltae_pl = plane_OL.lon.G.Gthetadeltae.Gfact;
 Galphadeltae_pl = plane_OL.lon.G.Galphadeltae.Gfact;
 Gqdeltae_pl     = plane_OL.lon.G.Gqdeltae.Gfact;
-K_DL = 1/plane_OL.lon.G.Gthetadeltae.K;
+K_dl = 1/plane_OL.lon.G.Gthetadeltae.K;
 
 % Factores de multiplicidad Cmalpha y Cmq
 F_alpha  = [-0.5 -0.2 0 0.5 1 2 3 4];
-%F_alpha = 1;
+F_alpha = 1;
 F_q      = [-0.5 -0.2 0 0.5 1 2 3 4];
+F_q      = linspace(-5,5,10);
+F_q      = 5;
 %F_q = 1;
 Kalpha   = - (F_alpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
 Kq       = - (F_q-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
@@ -292,13 +294,16 @@ for i=1:length(Kalpha)
     for j=1:length(Kq)
         % -- Ensamblaje de la FT en lazo cerrado --
         s = tf('s');
-        Gthetadeltae_CL{i,j} = K_DL*(Ga_deltae*Gthetadeltae_pl)/(1+Ga_deltae*Kalpha(i)*Gs_alpha*Galphadeltae_pl +...
-                                     Kq(j)*Gs_q*s*Gthetadeltae_pl);
+        Gthetadeltae_CL{i,j} = K_dl*(Ga_deltae*Gthetadeltae_pl)/(1+Ga_deltae*Kalpha(i)*Gs_alpha*Galphadeltae_pl +...
+                                     Kq(j)*Gs_q*Gqdeltae_pl/plane_OL.lon.t_lon);
         polesAUX = round(pole(Gthetadeltae_CL{i,j}),4);
         zerosAUX = round(zero(Gthetadeltae_CL{i,j}),4);
         % Quita a la lista de polos los ceros que sean iguales a estos.
         % Para eliminar los polos residuales de la planta libre.
         polesAUXclean = setdiff(polesAUX,zerosAUX);
+%         if i==4 && j==7
+%             polesAUXCHECK = polesAUXclean;
+%         end
         if Kalpha(i)==0 && Kq(j)==0
         else
             if Kalpha(i) < 0
@@ -316,12 +321,6 @@ for i=1:length(Kalpha)
                 % -- Bucle en todos los polos --
                 % Filtramos los polos cerca del origen (modo fugoide) a
                 % mano. Mejorable.
-%                 if abs(imag(polesAUXclean(k))) >= 0.3
-%                     plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
-%                     hold on
-%                 elseif abs(real(polesAUXclean(k))) >= 0.15
-%                     plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
-%                     hold on
                 if abs(imag(polesAUXclean(k))) > 1
                     plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
                     hold on
@@ -338,6 +337,25 @@ for i=1:length(Kalpha)
     end
 end
 sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
+
+% marker = '^';
+% for k=1:length(polesAUXCHECK)
+%     % -- Bucle en todos los polos --
+%     % Filtramos los polos cerca del origen (modo fugoide) a
+%     % mano. Mejorable.
+%     if abs(imag(polesAUXCHECK(k))) > 1
+%         plot(polesAUXCHECK(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','k')
+%         hold on
+% 
+%     elseif real(polesAUXCHECK(k)) < -1
+%         if real(polesAUXCHECK(k)) == -10
+%         else
+%             plot(polesAUXCHECK(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','k')    
+%             hold on
+%         end
+%     end
+% end
+
 h = zeros(5, 1);
 h(1) = plot(NaN,NaN,'x','MarkerEdgeColor','k');
 h(2) = plot(NaN,NaN,'s','MarkerFaceColor','w','MarkerEdgeColor','k');
@@ -347,39 +365,308 @@ h(5) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeC
 legend(h, 'Planta libre','$k_{\delta_e \alpha} < 0$, $k_{\delta_e q} < 0$','$k_{\delta_e \alpha} < 0$, $k_{\delta_e q} >= 0$',...
                            '$k_{\delta_e \alpha} >= 0$, $k_{\delta_e q} < 0$','$k_{\delta_e \alpha} >= 0$, $k_{\delta_e q} >= 0$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
 
+%% -- 5. Diseño del SAS --
 
-%% -- 5. Dise�o del SAS --
-plane_cont = Plane(GlobalHawk);
+plane_OL  = Plane(GlobalHawk);
+plane_SAS = Plane(GlobalHawk);
+wn_FQ  = [sqrt(0.28*plane_OL.model.CL.alpha/plane_OL.FC.CLs) sqrt(3.6*plane_OL.model.CL.alpha/plane_OL.FC.CLs)];
+xi_FQ = [0.35 1.30];
 
-% Ganancias de realimentaci�n
+% Ganancias de realimentacion escogidas en el apartado anterior
 Kalpha = 2;
 Kq = -0.2;
-% plane_cont.lon.Cont.Gudeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gudeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-%                                      Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
-% plane_cont.lon.Cont.Galphadeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Galphadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-%                                      Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
-% plane_cont.lon.Cont.Gthetadeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-%                                      Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
-% plane_cont.lon.Cont.Gqdeltae = K_DL*(Ga_deltae*plane_cont.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-%                                      Kq*Gs_q*s*plane_OL.lon.t_lon*plane_cont.lon.G.Gthetadeltae.Gfact);
 
-plane_cont.lon.Cont.Gudeltae = (Ga_deltae*plane_cont.lon.G.Gudeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
-plane_cont.lon.Cont.Galphadeltae = (Ga_deltae*plane_cont.lon.G.Galphadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
-plane_cont.lon.Cont.Gthetadeltae = (Ga_deltae*plane_cont.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
-plane_cont.lon.Cont.Gqdeltae = (Ga_deltae*plane_cont.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_cont.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_cont.lon.G.Gqdeltae.Gfact);
+% Funciones de transferencia y Kdl
+Ga_deltae = Utils.forlagTF;
+Gs_alpha = 1;
+Gs_q = 1;
+Gthetadeltae_pl = plane_OL.lon.G.Gthetadeltae.Gfact;
+Galphadeltae_pl = plane_OL.lon.G.Galphadeltae.Gfact;
+Gqdeltae_pl     = plane_OL.lon.G.Gqdeltae.Gfact;
+K_dl = 1/plane_OL.lon.G.Gthetadeltae.K;
 
-                                 
-GSAS_u =  plane_cont.lon.Cont.Gudeltae;
-GSAS_alpha =  plane_cont.lon.Cont.Galphadeltae;
-GSAS_theta = plane_cont.lon.Cont.Gthetadeltae;
-GSAS_q =  plane_cont.lon.Cont.Gqdeltae;
+% Funciones de transferencia
+plane_SAS.lon.Cont.Gudeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gudeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
+plane_SAS.lon.Cont.Galphadeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Galphadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
+plane_SAS.lon.Cont.Gthetadeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
+plane_SAS.lon.Cont.Gqdeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
 
-                                 
-%% -- 6.1. Dise�o AP: Root Locus
+
+
+% Guardamos las funciones de transferencia del SAS aparte                   
+GSAS_u =  plane_SAS.lon.Cont.Gudeltae.Gfact/K_dl;
+GSAS_alpha =  plane_SAS.lon.Cont.Galphadeltae.Gfact/K_dl;
+GSAS_theta = plane_SAS.lon.Cont.Gthetadeltae.Gfact/K_dl;
+GSAS_q =  plane_SAS.lon.Cont.Gqdeltae.Gfact/K_dl;
+
+% Esquema: delta --> K_DL --> G_actuador --> G_longitudinal --> variable
+% Definir rampa
+tsimtr = [150 50 150 100];    % Tiempo total de simulacion - transitorio [s]
+tsimst = [500 500 500 500];   % Tiempo total de simulacion - estacionario [s]
+tramp  = 5;                   % Tiempo de rampeo [s]
+amp    = 1;                   % Amplitud de la rampa [deg]
+G_a = Utils.forlagTF;
+
+% Se seleccionara una ganancia de Direct-Link que proporcione un incremento
+% de angulo de asiento de 1 grado por cada grado de deflexion del mando de cabeceo
+
+
+fprintf("--------- Tiempos Caracteristicos Lazo Cerrado con SAS en alpha y q -----------\n");
+
+for i = 1:length(varnames)
+    fig = figure('Position', [100, 100, 1120, 420]);
+    
+    
+    % Transitorio
+    subplot(1, 2, 1)
+    hold on
+    t = 0:0.05:tsimtr(i);
+    u = max(0,min(amp/tramp*(t),amp));
+    grid minor
+    hold on
+    box on
+    [y, t_out, ~] = lsim(plane_SAS.lon.Cont.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i), u, t);
+    plot(t_out, y, 'k')
+    hold on
+    [yorig, t_outorig, ~] = lsim(plane_SAS.lon.G.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i)*G_a*K_dl, u, t);
+    plot(t_outorig, yorig, 'k--')
+    if i==1
+        hold on
+        plot(t,u,'k-.')
+    end
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+    
+    % Zoom en perturbacion
+    if i~=2
+        axes('Position',[.30 .67 .15 .15])
+    else
+        axes('Position',[.30 .20 .15 .15])
+    end
+    box on; % put box around new pair of axes
+    indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
+    plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+    grid on;
+    axis tight
+    
+    % Estacionario
+    subplot(1, 2, 2)
+    t = 0:0.05:tsimst(i);
+    u = max(0,min(amp/tramp*(t),amp));
+    grid minor
+    hold on
+    box on
+    [y, t_out, ~] = lsim(plane_SAS.lon.Cont.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i), u, t);
+    plot(t_out, y, 'k')
+    [yorig, t_outorig, ~] = lsim(plane_SAS.lon.G.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i)*G_a*K_dl, u, t);
+    plot(t_outorig, yorig, 'k--')
+    if i==1
+        hold on
+        plot(t,u,'k-.')
+        legend('Respuesta SAS','Respuesta PL', '$\Delta \delta_e$', 'Interpreter', 'latex')
+    end
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Estacionario','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+    plane_SAS.lon.Cont.(genvarname(Gnames(i))).ramp = lsiminfo(y, t_out);
+
+    if save == false
+        sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
+    else
+        sgtitle("")
+        saveas(gcf,strcat("Graficas/SAS/Ramp_SAS_", varnames(i)),'eps')
+    end
+    
+    % Rise Time and Time Delay Calculation and printing in console
+    
+    [tr,td] = Utils.getTimesRD(y,t);
+    TrTd_SAS{i} = [tr,td];
+    fprintf(varnames(i) + "\n");
+    fprintf("Rise Time: " + num2str(tr) + " s\n");
+    fprintf("Time Delay: " + num2str(td) + " s\n");
+
+end
+%%
+figure
+bode(plane_OL.lon.G.Gthetadeltae.Gfact*K_dl*Ga_deltae)
+hold on
+bode(GSAS_theta*K_dl)
+hold on
+legend('Kdl + Ga', 'Kdl + Ga + SAS')
+grid on
+%% -- 5.1. Análisis frente a tolerancias aerodinámicas --
+clear
+
+plane_OL  = Plane(GlobalHawk);
+plane_Aux = Plane(GlobalHawk);
+
+% Factores de multiplicidad Cmalpha y Cmq
+F_alpha  = [0.8 1.2];
+F_q  = [0.8 1.2];
+F_deltae  = [0.8 1.2];
+
+% Barrido (apartado anterior)
+Falpha  = [-0.5 -0.2 0 0.5 1 2 3 4];
+Fq      = [-0.5 -0.2 0 0.5 1 2 3 4];
+K_alpha   = - (Falpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
+K_q       = - (Fq-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
+
+% Ganancias de realimentacion escogidas en el apartado anterior
+Kalpha = 0.75;
+Kq = -20;
+
+% Funciones de transferencia y Kdl
+Ga_deltae = Utils.forlagTF;
+Gs_alpha = 1;
+Gs_q = 1;
+K_dl = 1/plane_OL.lon.G.Gthetadeltae.K;
+
+Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                         Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+% Root locus
+figure('Position', [10 10 900 400])
+polesAUX_0 = round(pole(Gthetadeltae_SAS),4);
+zerosAUX_0 = round(zero(Gthetadeltae_SAS),4);
+polesAUX_0 = sort(setdiff(polesAUX_0,zerosAUX_0));
+for k=1:length(polesAUX_0)
+    if abs(imag(polesAUX_0(k))) > 0
+        plot(polesAUX_0(k),'x','MarkerSize',12,'MarkerEdgeColor','k')
+        hold on       
+    else
+        plot(polesAUX_0(k),0,'x','MarkerSize',12,'MarkerEdgeColor','k')    
+        hold on
+    end
+end
+% plot([polesAUX_0(4) conj(polesAUX_0(4))],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+% hold on
+% plot(polesAUX_0(3),0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
+xlabel('Re(s)','Interpreter','latex')
+ylabel('Im(s)','Interpreter','latex')
+xlim([-10 5])
+ylim([-19.5 19.5])
+hold on
+grid minor
+marker = ['v' '^'];
+
+GM_alpha_cumple = 'CUMPLE';
+for i=1:length(F_alpha)
+    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.alpha*F_alpha(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    polesAUX = round(pole(Gthetadeltae_SAS),4);
+    zerosAUX = round(zero(Gthetadeltae_SAS),4);
+    polesAUX_alpha{i} = setdiff(polesAUX,zerosAUX);
+    color = 'w';
+    for k=1:length(polesAUX_alpha{i})
+        if abs(imag(polesAUX_alpha{i}(k))) > 0
+            plot(polesAUX_alpha{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+            hold on       
+        else
+            plot(polesAUX_alpha{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+            hold on
+        end
+    end
+    [GM, PM] = margin(Gthetadeltae_SAS);
+    GM_alpha(i) = GM;
+    PM_alpha(i) = PM;
+    if GM_alpha(i) < 4.5 || PM_alpha(i) < 30
+        GM_alpha_cumple = 'NO CUMPLE';
+    end
+end
+
+GM_q_cumple = 'CUMPLE';
+for i=1:length(F_q)
+    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.q*F_q(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact);
+    polesAUX = round(pole(Gthetadeltae_SAS),4);
+    zerosAUX = round(zero(Gthetadeltae_SAS),4);
+    polesAUX_q{i} = setdiff(polesAUX,zerosAUX);
+    color = [197/255 197/255 197/255];
+    for k=1:length(polesAUX_q{i})
+        if abs(imag(polesAUX_q{i}(k))) > 0
+            plot(polesAUX_q{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+            hold on       
+        else
+            plot(polesAUX_q{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+            hold on
+        end
+    end
+    [GM, PM] = margin(Gthetadeltae_SAS);
+    GM_q(i) = GM;
+    PM_q(i) = PM;
+    if GM_q(i) < 4.5 || PM_q(i) < 30
+        GM_q_cumple = 'NO CUMPLE';
+    end
+end
+
+GM_deltae_cumple = 'CUMPLE';
+for i=1:length(F_deltae)
+    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.deltae*F_deltae(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact);
+    polesAUX = round(pole(Gthetadeltae_SAS),4);
+    zerosAUX = round(zero(Gthetadeltae_SAS),4);
+    polesAUX_deltae{i} = setdiff(polesAUX,zerosAUX);
+    color = 'k';
+    for k=1:length(polesAUX_deltae{i})
+        if abs(imag(polesAUX_deltae{i}(k))) > 0
+            plot(polesAUX_deltae{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+            hold on       
+        else
+            plot(polesAUX_deltae{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+            hold on
+        end
+    end
+    [GM, PM] = margin(Gthetadeltae_SAS);
+    GM_deltae(i) = GM;
+    PM_deltae(i) = PM;
+    if GM_deltae(i) < 4.5 || PM_deltae(i) < 30
+        GM_deltae_cumple = 'NO CUMPLE';
+    end
+end
+
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
+h = zeros(6, 1);
+h(1) = plot(NaN,NaN,'v','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(2) = plot(NaN,NaN,'^','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(3) = plot(NaN,NaN,'v','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+h(4) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+h(5) = plot(NaN,NaN,'v','MarkerFaceColor','k','MarkerEdgeColor','k');
+h(6) = plot(NaN,NaN,'^','MarkerFaceColor','k','MarkerEdgeColor','k');
+legend(h, '$0.8\cdot C_{m\hat{q}}$','$1.2\cdot C_{m\hat{q}}$','$0.8\cdot C_{m\alpha}$','$1.2\cdot C_{m\alpha}$',...
+                           '$0.8\cdot C_{m\delta_e}$','$1.2\cdot C_{m\delta_e}$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
+
+fprintf('----------- Robustez frente a tolerancias aerodinámicas ------------\n')
+fprintf(strcat('Kalpha = ',num2str(Kalpha),'    Kq =',num2str(Kq),'\n'))
+fprintf('------ +-20 Cmalpha -------\n')
+fprintf(strcat('GM -20 = ',num2str(round(GM_alpha(1),4)),'  PM -20 = ',num2str(round(PM_alpha(1),4)),'\n'))
+fprintf(strcat('GM +20 = ',num2str(round(GM_alpha(2),4)),'  PM +20 = ',num2str(round(PM_alpha(2),4)),'\n'))
+fprintf(strcat(GM_alpha_cumple,'\n'))
+fprintf('------ +-20 Cmq -------\n')
+fprintf(strcat('GM -20 = ',num2str(round(GM_q(1),4)),'  PM -20 = ',num2str(round(PM_q(1),4)),'\n'))
+fprintf(strcat('GM +20 = ',num2str(round(GM_q(2),4)),'  PM +20 = ',num2str(round(PM_q(2),4)),'\n'))
+fprintf(strcat(GM_q_cumple,'\n'))
+fprintf('------ +-20 Cmdeltae -------\n')
+fprintf(strcat('GM -20 = ',num2str(round(GM_deltae(1),4)),'  PM -20 = ',num2str(round(PM_deltae(1),4)),'\n'))
+fprintf(strcat('GM +20 = ',num2str(round(GM_deltae(2),4)),'  PM +20 = ',num2str(round(PM_deltae(2),4)),'\n'))
+fprintf(strcat(GM_deltae_cumple,'\n'))
+
+%% -- 6.1. Diseño AP: Root Locus
 
 % Valores PID
 k_p = [-0.1,-0.2,-0.5,-1,-2,-5];
@@ -437,13 +724,13 @@ sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
 
 
 
-%% -- 6.2 Dise�o de AP: PID
+%% -- 6.2 Diseño de AP: PID
 
 % Datos preliminares para respuesta en rampa
-tsimtr = [150 50 100 100];    % Tiempo total de simulaci�n - transitorio [s]
-tsimst = [500 500 500 500];   % Tiempo total de simulaci�n - estacionario [s]
+tsimtr = [150 50 100 100];    % Tiempo total de simulacion - transitorio [s]
+tsimst = [500 500 500 500];   % Tiempo total de simulacion - estacionario [s]
 tramp  = 5;                   % Tiempo de rampeo [s]
-amp    = 1;                   % Amplitud de la rampa [�]
+amp    = 1;                   % Amplitud de la rampa [deg]
 
 syms = ["-","--",":","-.","-","--"];
 
@@ -527,7 +814,7 @@ for i=1:length(k_p)
     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
     Gms_p(i) = Gm; Pms_p(i) = Pm; wp_p(i) = Wcp; 
     
-    % Calculo de Tiempos caracter�sticos
+    % Calculo de Tiempos caracteristicos
     [tr,td] = Utils.getTimesRD(y,t);
     fprintf("Kp = "+ k_p(i) + ", Kd = " + k_d + ", Ki = " + k_i + "\n");
     fprintf("Rise Time: " + num2str(tr) + " s\n");
@@ -614,7 +901,7 @@ for i=1:length(k_i)
     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-        % Zoom en perturbaci�n
+        % Zoom en perturbacion
 %     ax2.indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
 %     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
 %     grid on;
@@ -624,7 +911,7 @@ for i=1:length(k_i)
     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
     Gms_i(i) = Gm; Pms_i(i) = Pm; wp_i(i) = Wcp; 
     
-    % Calculo de Tiempos caracter�sticos
+    % Calculo de Tiempos caracteristicos
     [tr,td] = Utils.getTimesRD(y,t);
     fprintf("Kp = "+ k_p + ", Kd = " + k_d + ", Ki = " + k_i(i) + "\n");
     fprintf("Rise Time: " + num2str(tr) + " s\n");
@@ -733,7 +1020,7 @@ for i=1:length(k_d)
     
     
     
-%        Zoom en perturbaci�n
+%        Zoom en perturbacion
 %     indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
 %     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
 %     grid on;
@@ -743,7 +1030,7 @@ for i=1:length(k_d)
     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
     Gms_d(i) = Gm; Pms_d(i) = Pm; wp_d(i) = Wcp; 
     
-    % Calculo de Tiempos caracter�sticos
+    % Calculo de Tiempos caracteristicos
     [tr,td] = Utils.getTimesRD(y,t);
     fprintf("Kp = "+ k_p + ", Kd = " + k_d(i) + ", Ki = " + k_i + "\n");
     fprintf("Rise Time: " + num2str(tr) + " s\n");
@@ -767,10 +1054,10 @@ k_i = -0.2;
 k_d = -0.05;
 
 % Definir rampa
-tsimtr = [150 50 150 100];    % Tiempo total de simulaci�n - transitorio [s]
-tsimst = [500 500 500 500];   % Tiempo total de simulaci�n - estacionario [s]
+tsimtr = [150 50 150 100];    % Tiempo total de simulacion - transitorio [s]
+tsimst = [500 500 500 500];   % Tiempo total de simulacion - estacionario [s]
 tramp  = 5;                   % Tiempo de rampeo [s]
-amp    = 1;                   % Amplitud de la rampa [�]
+amp    = 1;                   % Amplitud de la rampa [deg]
 delay = 0.1;                  % Delay del actuador
 
 PID_AP = pid(k_p,k_i,k_d);
@@ -778,7 +1065,7 @@ Gs_theta = Utils.padeTF();
 load('Gaps.mat');
 GSASs = [Gap_u,Gap_alpha,GSAS_theta,Gap_q];
 
-fprintf("--------- Tiempos Caracter�sticos AP para cada variable -----------\n");
+fprintf("--------- Tiempos Caracteristicos AP para cada variable -----------\n");
 
 for i = 1:length(varnames)
     fig = figure('Position', [100, 100, 1120, 420]);
@@ -809,7 +1096,7 @@ for i = 1:length(varnames)
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
     ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
     
-    % Zoom en perturbaci�n
+    % Zoom en perturbacion
 
     axes('Position',[.30 .67 .15 .15])
     box on; % put box around new pair of axes
