@@ -217,8 +217,8 @@ poles_SP_0 = polesAUX(1);
 plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
 xlabel('Re(s)','Interpreter','latex')
 ylabel('Im(s)','Interpreter','latex')
-xlim([-10 5])
-ylim([-19.5 19.5])
+xlim([-0.3 0.5])
+ylim([-1.5 1.5])
 hold on
 grid minor
 
@@ -246,7 +246,7 @@ for i=1:length(F_alpha)
         end
     end
 end
-sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[1 4 8 12 16 20 24])
 
 %% -- 4. Barrido de ganancias de realimentacion --
 % Analisis del lugar de las raices del modo de corto periodo con
@@ -718,7 +718,7 @@ end
 
 %% -- 5.1 Diseño del SAS --
 
-save = true;
+save = false;
 plane_OL  = Plane(GlobalHawk);
 plane_SAS = Plane(GlobalHawk);
 wn_FQ  = [sqrt(0.28*plane_OL.model.CL.alpha/plane_OL.FC.CLs) sqrt(3.6*plane_OL.model.CL.alpha/plane_OL.FC.CLs)];
@@ -1032,7 +1032,7 @@ tsimst = [500 500 500 500];   % Tiempo total de simulacion - estacionario [s]
 tramp  = 5;                   % Tiempo de rampeo [s]
 amp    = 1;                   % Amplitud de la rampa [deg]
 
-syms = ["-","--",":","-.","-","--"];
+syms = ["-","--",":","-."];
 
 % Barrido PID
 
@@ -1041,8 +1041,8 @@ syms = ["-","--",":","-.","-","--"];
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = [-0.1-0.2,-0.5,-1,-2,-5];
-k_i = 0;
+k_p = [-0.1, -0.2, -0.5, -1, -2];
+k_i = [-0.01, -0.1, -0.2, -0.5, -1];
 k_d = 0;
 Gs_theta = Utils.padeTF();
 
@@ -1070,281 +1070,365 @@ nopts = nicholsoptions;
 	nopts.Title.FontSize = 14;
 	nopts.Title.Interpreter = 'latex';
     
-    nopts.YLabel.String = Magnames_latex(3);
-    nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
+    nopts.YLabel.String = '$\left | G_{OL}(i\omega) \right |$';
+    nopts.Title.String = '';
 
 set(0, 'CurrentFigure', f_step)
     ax = gca; hold(ax,'on');
     ax.FontSize = 13; 
     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-    %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
 
+% - Barrido Kp -
+figure
+lines = {'-' '--' '-.' ':'};
+for i=1:4
+    PID_AP = pid(k_p(i),0,0);
+    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;  
+    nicholsplot(Gap_theta_ol,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('$k\_{p} = -0.1$','$k\_{p} = -0.2$','$k\_{p} = -0.5$','$k\_{p} = -1$','Interpreter','latex','Location','northoutside','NumColumns',2,'FontSize',12)
+if save == true
+    saveas(gcf,"Graficas/AP/AP_Barrido_Nichols_Kp",'eps')
+end
+
+% - Barrido Ki -
+figure
+lines = {'-' '--' '-.' ':'};
+for i=1:4
+    PID_AP = pid(0,k_i(i),0);
+    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;  
+    nicholsplot(Gap_theta_ol,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('$k\_{i} = -0.01$','$k\_{i} = -0.1$','$k\_{i} = -0.5$','$k\_{i} = -1$','Interpreter','latex','Location','northoutside','NumColumns',2,'FontSize',12)
+if save == true
+    saveas(gcf,"Graficas/AP/AP_Barrido_Nichols_Ki",'eps')
+end
+
+% - Barrido Kp-Ki -
+k_p = [-0.5, -0.5, -1, -1];
+k_i = [-0.1, -0.2, -0.1, -0.2];
+figure
+lines = {'-' '--' '-.' ':'};
 for i=1:length(k_p)
-    
-    PID_AP = pid(k_p(i),k_i,k_d);
-    Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
-    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
-    
-    % Nichols plotting
-    set(0, 'CurrentFigure', f_nichols)
-    nicholsplot(Gap_theta_ol, {lims(1), lims(2)},nopts); hold on
-    
-    % Step Plotting
-    set(0, 'CurrentFigure', f_step)
-    % Transitorio
-    t = 0:0.05:tsimtr(3);
-    u = max(0,min(amp/tramp*(t),amp));
-    [y, t_out, ~] = lsim(Gap_theta, u, t);
-    hold(ax,'on');
-    plot(t_out,y,'LineStyle',syms(i),'Color','k'); hold on
-    if(i == 1)
-        text(t(end)*0.75,y(end)*1.1,'$[k_{\delta_{e} \theta}]_P$' + " = " + num2str(k_p(i)),'FontSize',10,'Interpreter','latex');hold on
-    else
-        text(t(end)*0.75,y(end)*1.1,num2str(k_p(i)),'FontSize',10,'Interpreter','latex');hold on
-    end
-    ax = gca;
-    ax.FontSize = 13; 
-    title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
-    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
-    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-    
-
-    % Sacamos los valores de margen de fase y ganancia
-    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
-    Gms_p(i) = mag2db(Gm); Pms_p(i) = Pm; wp_p(i) = Wcp; 
-    
-    % Calculo de Tiempos caracteristicos
-    [tr,td] = Utils.getTimesRD(y,t);
-    fprintf("Kp = "+ k_p(i) + ", Kd = " + k_d + ", Ki = " + k_i + "\n");
-    fprintf("Rise Time: " + num2str(tr) + " s\n");
-    fprintf("Time Delay: " + num2str(td) + " s\n");
-    
+    PID_AP = pid(k_p(i),k_i(i),0);
+    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;  
+    nicholsplot(Gap_theta_ol,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('$\{k\_p,k\_i\}  = \{-0.5, -0.1\}$','$\{k\_p,k\_i\}  = \{-0.5, -0.2\}$',...
+       '$\{k\_p,k\_i\}  = \{-1, -0.1\}$','$\{k\_p,k\_i\}  = \{-1, -0.2\}$','Interpreter','latex','Location','northoutside','NumColumns',2,'FontSize',12)
+if save == true
+    saveas(gcf,"Graficas/AP/AP_Barrido_Nichols_KpKi",'eps')
 end
 
-set(0, 'CurrentFigure', f_step)
-    grid minor
-    box on
-set(0, 'CurrentFigure', f_nichols)
-    grid minor
-    box on
-    
-
-    
-% 2) Integrador
-
-lims = [1e-2 1e2];
-
-% Valores PID
-k_p = -1.75;
-k_i = [0,-0.05,-0.2,-0.5,-1,-2];
-k_d = 0;
-Gs_theta = Utils.padeTF();
-
-% Margenes y fases
-
-Gms_i = zeros(1,length(k_i));
-Pms_i = zeros(1,length(k_i));
-wp_i = zeros(1,length(k_i));
-
-
-f_nichols = figure;
-f_step = figure('Position', [100, 100, 600, 420]);
-
-nopts = nicholsoptions;
-	nopts.PhaseMatching = 'on';
-	nopts.PhaseMatchingFreq = lims(1);
-	nopts.PhaseMatchingValue = 0;
-    
-	nopts.XLabel.String = '$\phi(\omega)$';
-	nopts.XLabel.FontSize = 13;
-	nopts.XLabel.Interpreter = 'latex';
-    
-	nopts.YLabel.FontSize = 13;
-	nopts.YLabel.Interpreter = 'latex';
-    
-	nopts.Title.FontSize = 14;
-	nopts.Title.Interpreter = 'latex';
-    
-    nopts.YLabel.String = Magnames_latex(3);
-    nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
-
-set(0, 'CurrentFigure', f_step)
-    ax = gca;
-    ax.FontSize = 13; 
-    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
-    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
-    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-    %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
-%     axes('Position',[.67 .73 .15 .15]); hold on
-%     box on; % put box around new pair of axes
-
-for i=1:length(k_i)
-    
-    PID_AP = pid(k_p,k_i(i),k_d);
-    Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
-    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
-    
-    % Nichols plotting
-    set(0, 'CurrentFigure', f_nichols)
-    nicholsplot(Gap_theta_ol, {lims(1), lims(2)}, nopts, syms(i)); hold on
-    
-    % Step Plotting
-    set(0, 'CurrentFigure', f_step)
-    % Transitorio
-    t = 0:0.05:tsimtr(4);
-    u = max(0,min(amp/tramp*(t),amp));
-    [y, t_out, ~] = lsim(Gap_theta, u, t);
-    plot(t_out, y, syms(i),'Color','k'); hold on
-    ax = gca;
-    ax.FontSize = 13; 
-    title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
-    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
-    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-        % Zoom en perturbacion
-%     ax2.indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
-%     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
-%     grid on;
-%     axis tight
-    
-    % Calculo de margenes de ganancia y fase
-    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
-    Gms_i(i) = mag2db(Gm); Pms_i(i) = Pm; wp_i(i) = Wcp; 
-    
-    % Calculo de Tiempos caracteristicos
-    [tr,td] = Utils.getTimesRD(y,t);
-    fprintf("Kp = "+ k_p + ", Kd = " + k_d + ", Ki = " + k_i(i) + "\n");
-    fprintf("Rise Time: " + num2str(tr) + " s\n");
-    fprintf("Time Delay: " + num2str(td) + " s\n");
+% - Barrido Kd -
+% Habiendo escogido kp = -1, ki = -0.2, barremos en kd para mejorar el
+% amortiguamiento
+figure
+k_d = [-0.2 -0.1 -0.05];
+lines = {'-' '--' '-.' ':'};
+for i=1:3
+    PID_AP = pid(-1,-0.2,k_d(i));
+    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;  
+    nicholsplot(Gap_theta_ol,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('$k\_{d} = -0.2$','$k\_{d} = -0.1$','$k\_{d} = -0.05$','Interpreter','latex','Location','northoutside','NumColumns',2,'FontSize',12)
+if save == true
+    saveas(gcf,"Graficas/AP/AP_Barrido_Nichols_Kd",'eps')
 end
 
-set(0, 'CurrentFigure', f_step)
-    grid minor
-    hold on
-    box on
-set(0, 'CurrentFigure', f_nichols)
-    grid minor
-    hold on
-    box on
-    
-
-% 3) Derivativo
-
-lims = [1e-2 1e2];
-
-% Valores PID
-k_p = -1;
-k_i = -0.2;
-k_d = [0,-0.05,-0.2];
-Gs_theta = Utils.padeTF();
-
-% Margenes y fases
-
-Gms_d = zeros(1,length(k_d));
-Pms_d = zeros(1,length(k_d));
-wp_d = zeros(1,length(k_d));
+% -- Chequeo de márgenes --
+k_p_check = -1;
+k_i_check = -0.2;
+k_d_check = -0.1;
+PID_AP = pid(k_p_check,k_i_check,k_d_check);
+Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;  
+[GM_base, PM_base] = margin(Gap_theta_ol);
+GM_base_cumple = 'CUMPLE';
+GM_base = mag2db(GM_base);
+if GM_base < 6 || PM_base < 45
+    GM_base_cumple = 'NO CUMPLE';
+end
+fprintf('----------- Chequeo PID ------------\n')
+fprintf(strcat('Kp = ',num2str(k_p_check),'    Ki =',num2str(k_i_check),'    Kd =',num2str(k_d_check),'\n'))
+fprintf(strcat('GM = ',num2str(round(GM_base,4)),'  PM = ',num2str(round(PM_base,4)),'\n'))
+fprintf(strcat(GM_base_cumple,'\n'))
 
 
-f_nichols = figure;
-f_step = figure('Position', [100, 100, 600, 420]);
-f_step_zoom = figure('Position',[100, 100, 600, 420]);
-
-nopts = nicholsoptions;
-	nopts.PhaseMatching = 'on';
-	nopts.PhaseMatchingFreq = lims(1);
-	nopts.PhaseMatchingValue = 0;
-    
-	nopts.XLabel.String = '$\phi(\omega)$';
-	nopts.XLabel.FontSize = 13;
-	nopts.XLabel.Interpreter = 'latex';
-    
-	nopts.YLabel.FontSize = 13;
-	nopts.YLabel.Interpreter = 'latex';
-    
-	nopts.Title.FontSize = 14;
-	nopts.Title.Interpreter = 'latex';
-    
-    nopts.YLabel.String = Magnames_latex(3);
-    nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
-
-    
-set(0, 'CurrentFigure', f_step_zoom)
-    ax = gca;
-    ax.FontSize = 13; 
-    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
-    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
-    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')    
-
-set(0, 'CurrentFigure', f_step)
-    ax = gca;
-    ax.FontSize = 13; 
-    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
-    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
-    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-    %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
-%     axes('Position',[.67 .73 .15 .15]); hold on
-%     box on; % put box around new pair of axes
-
-for i=1:length(k_d)
-    
-    PID_AP = pid(k_p,k_i,k_d(i));
-    Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
-    Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
-    
-    % Nichols plotting
-    set(0, 'CurrentFigure', f_nichols)
-    nicholsplot(Gap_theta_ol, {lims(1), lims(2)}, nopts, syms(i)); hold on
-    
-    % Step Plotting
-    set(0, 'CurrentFigure', f_step)
-    % Transitorio
-    t = 0:0.05:tsimtr(4);
-    u = max(0,min(amp/tramp*(t),amp));
-    [y, t_out, ~] = lsim(Gap_theta, u, t);
-    plot(t_out, y,syms(i),'Color','k'); hold on
-    ax = gca;
-    ax.FontSize = 13; 
-    title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
-    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
-    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-    set(0,'CurrentFigure',f_step_zoom);
-    t = 0:0.05:tsimtr(2);
-    u = max(0,min(amp/tramp*(t),amp));
-    [y, t_out, ~] = lsim(Gap_theta, u, t);
-    plot(t_out, y, syms(i)); hold on
-    ax = gca;
-    ax.FontSize = 13; 
-    title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
-    ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
-    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
-    
-    
-    
-%        Zoom en perturbacion
-%     indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
-%     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
-%     grid on;
-%     axis tight
-    
-    %Calculo de margenes de ganancia y fase
-    [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
-    Gms_d(i) = mag2db(Gm); Pms_d(i) = Pm; wp_d(i) = Wcp; 
-    
-    % Calculo de Tiempos caracteristicos
-    [tr,td] = Utils.getTimesRD(y,t);
-    fprintf("Kp = "+ k_p + ", Kd = " + k_d(i) + ", Ki = " + k_i + "\n");
-    fprintf("Rise Time: " + num2str(tr) + " s\n");
-    fprintf("Time Delay: " + num2str(td) + " s\n");
+if save == true
+    saveas(gcf,"Graficas/SAS/Barrido_Nichols_Kq",'eps')
 end
 
-set(0, 'CurrentFigure', f_step)
-    grid minor
-    hold on
-    box on
-set(0, 'CurrentFigure', f_nichols)
-    grid minor
-    hold on
-    box on
+
+% for i=1:length(k_p)
+%     
+%     PID_AP = pid(k_p(i),k_i,k_d);
+%     Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
+%     Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
+%     
+%     % Nichols plotting
+%     set(0, 'CurrentFigure', f_nichols)
+%     nicholsplot(Gap_theta_ol, {lims(1), lims(2)},nopts); hold on
+%     
+%     % Step Plotting
+%     set(0, 'CurrentFigure', f_step)
+%     % Transitorio
+%     t = 0:0.05:tsimtr(3);
+%     u = max(0,min(amp/tramp*(t),amp));
+%     [y, t_out, ~] = lsim(Gap_theta, u, t);
+%     hold(ax,'on');
+%     plot(t_out,y,'LineStyle',syms(i),'Color','k'); hold on
+%     if(i == 1)
+%         text(t(end)*0.75,y(end)*1.1,'$[k_{\delta_{e} \theta}]_P$' + " = " + num2str(k_p(i)),'FontSize',10,'Interpreter','latex');hold on
+%     else
+%         text(t(end)*0.75,y(end)*1.1,num2str(k_p(i)),'FontSize',10,'Interpreter','latex');hold on
+%     end
+%     ax = gca;
+%     ax.FontSize = 13; 
+%     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
+%     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+%     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+%     
+% 
+%     % Sacamos los valores de margen de fase y ganancia
+%     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
+%     Gms_p(i) = mag2db(Gm); Pms_p(i) = Pm; wp_p(i) = Wcp; 
+%     
+%     % Calculo de Tiempos caracteristicos
+%     [tr,td] = Utils.getTimesRD(y,t);
+%     fprintf("Kp = "+ k_p(i) + ", Kd = " + k_d + ", Ki = " + k_i + "\n");
+%     fprintf("Rise Time: " + num2str(tr) + " s\n");
+%     fprintf("Time Delay: " + num2str(td) + " s\n");
+%     
+% end
+% 
+% set(0, 'CurrentFigure', f_step)
+%     grid minor
+%     box on
+% set(0, 'CurrentFigure', f_nichols)
+%     grid minor
+%     box on
+%     
+% 
+%     
+% % 2) Integrador
+% 
+% lims = [1e-2 1e2];
+% 
+% % Valores PID
+% k_p = -1.75;
+% k_i = [0,-0.05,-0.2,-0.5,-1,-2];
+% k_d = 0;
+% Gs_theta = Utils.padeTF();
+% 
+% % Margenes y fases
+% 
+% Gms_i = zeros(1,length(k_i));
+% Pms_i = zeros(1,length(k_i));
+% wp_i = zeros(1,length(k_i));
+% 
+% 
+% f_nichols = figure;
+% f_step = figure('Position', [100, 100, 600, 420]);
+% 
+% nopts = nicholsoptions;
+% 	nopts.PhaseMatching = 'on';
+% 	nopts.PhaseMatchingFreq = lims(1);
+% 	nopts.PhaseMatchingValue = 0;
+%     
+% 	nopts.XLabel.String = '$\phi(\omega)$';
+% 	nopts.XLabel.FontSize = 13;
+% 	nopts.XLabel.Interpreter = 'latex';
+%     
+% 	nopts.YLabel.FontSize = 13;
+% 	nopts.YLabel.Interpreter = 'latex';
+%     
+% 	nopts.Title.FontSize = 14;
+% 	nopts.Title.Interpreter = 'latex';
+%     
+%     nopts.YLabel.String = Magnames_latex(3);
+%     nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
+% 
+% set(0, 'CurrentFigure', f_step)
+%     ax = gca;
+%     ax.FontSize = 13; 
+%     title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+%     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+%     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+%     %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+% %     axes('Position',[.67 .73 .15 .15]); hold on
+% %     box on; % put box around new pair of axes
+% 
+% for i=1:length(k_i)
+%     
+%     PID_AP = pid(k_p,k_i(i),k_d);
+%     Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
+%     Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
+%     
+%     % Nichols plotting
+%     set(0, 'CurrentFigure', f_nichols)
+%     nicholsplot(Gap_theta_ol, {lims(1), lims(2)}, nopts, syms(i)); hold on
+%     
+%     % Step Plotting
+%     set(0, 'CurrentFigure', f_step)
+%     % Transitorio
+%     t = 0:0.05:tsimtr(4);
+%     u = max(0,min(amp/tramp*(t),amp));
+%     [y, t_out, ~] = lsim(Gap_theta, u, t);
+%     plot(t_out, y, syms(i),'Color','k'); hold on
+%     ax = gca;
+%     ax.FontSize = 13; 
+%     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
+%     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+%     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+%         % Zoom en perturbacion
+% %     ax2.indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
+% %     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+% %     grid on;
+% %     axis tight
+%     
+%     % Calculo de margenes de ganancia y fase
+%     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
+%     Gms_i(i) = mag2db(Gm); Pms_i(i) = Pm; wp_i(i) = Wcp; 
+%     
+%     % Calculo de Tiempos caracteristicos
+%     [tr,td] = Utils.getTimesRD(y,t);
+%     fprintf("Kp = "+ k_p + ", Kd = " + k_d + ", Ki = " + k_i(i) + "\n");
+%     fprintf("Rise Time: " + num2str(tr) + " s\n");
+%     fprintf("Time Delay: " + num2str(td) + " s\n");
+% end
+% 
+% set(0, 'CurrentFigure', f_step)
+%     grid minor
+%     hold on
+%     box on
+% set(0, 'CurrentFigure', f_nichols)
+%     grid minor
+%     hold on
+%     box on
+%     
+% 
+% % 3) Derivativo
+% 
+% lims = [1e-2 1e2];
+% 
+% % Valores PID
+% k_p = -1;
+% k_i = -0.2;
+% k_d = [0,-0.05,-0.2];
+% Gs_theta = Utils.padeTF();
+% 
+% % Margenes y fases
+% 
+% Gms_d = zeros(1,length(k_d));
+% Pms_d = zeros(1,length(k_d));
+% wp_d = zeros(1,length(k_d));
+% 
+% 
+% f_nichols = figure;
+% f_step = figure('Position', [100, 100, 600, 420]);
+% f_step_zoom = figure('Position',[100, 100, 600, 420]);
+% 
+% nopts = nicholsoptions;
+% 	nopts.PhaseMatching = 'on';
+% 	nopts.PhaseMatchingFreq = lims(1);
+% 	nopts.PhaseMatchingValue = 0;
+%     
+% 	nopts.XLabel.String = '$\phi(\omega)$';
+% 	nopts.XLabel.FontSize = 13;
+% 	nopts.XLabel.Interpreter = 'latex';
+%     
+% 	nopts.YLabel.FontSize = 13;
+% 	nopts.YLabel.Interpreter = 'latex';
+%     
+% 	nopts.Title.FontSize = 14;
+% 	nopts.Title.Interpreter = 'latex';
+%     
+%     nopts.YLabel.String = Magnames_latex(3);
+%     nopts.Title.String = strcat("Nichols plot ", Gnames_latex(3));
+% 
+%     
+% set(0, 'CurrentFigure', f_step_zoom)
+%     ax = gca;
+%     ax.FontSize = 13; 
+%     title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+%     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+%     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')    
+% 
+% set(0, 'CurrentFigure', f_step)
+%     ax = gca;
+%     ax.FontSize = 13; 
+%     title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+%     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+%     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+%     %ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+% %     axes('Position',[.67 .73 .15 .15]); hold on
+% %     box on; % put box around new pair of axes
+% 
+% for i=1:length(k_d)
+%     
+%     PID_AP = pid(k_p,k_i,k_d(i));
+%     Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
+%     Gap_theta_ol = PID_AP*(GSAS_theta)*Gs_theta;
+%     
+%     % Nichols plotting
+%     set(0, 'CurrentFigure', f_nichols)
+%     nicholsplot(Gap_theta_ol, {lims(1), lims(2)}, nopts, syms(i)); hold on
+%     
+%     % Step Plotting
+%     set(0, 'CurrentFigure', f_step)
+%     % Transitorio
+%     t = 0:0.05:tsimtr(4);
+%     u = max(0,min(amp/tramp*(t),amp));
+%     [y, t_out, ~] = lsim(Gap_theta, u, t);
+%     plot(t_out, y,syms(i),'Color','k'); hold on
+%     ax = gca;
+%     ax.FontSize = 13; 
+%     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
+%     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+%     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+%     set(0,'CurrentFigure',f_step_zoom);
+%     t = 0:0.05:tsimtr(2);
+%     u = max(0,min(amp/tramp*(t),amp));
+%     [y, t_out, ~] = lsim(Gap_theta, u, t);
+%     plot(t_out, y, syms(i)); hold on
+%     ax = gca;
+%     ax.FontSize = 13; 
+%     title('Respuesta Rampa Saturada','FontSize', 15, 'Interpreter', 'latex')
+%     ylabel(Respnames_latex(3),'FontSize', 15, 'Interpreter', 'latex')
+%     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+%     
+%     
+%     
+% %        Zoom en perturbacion
+% %     indexOfInterest = (t < 5) & (t > 0); % range of t near perturbation
+% %     ax2.plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+% %     grid on;
+% %     axis tight
+%     
+%     %Calculo de margenes de ganancia y fase
+%     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
+%     Gms_d(i) = mag2db(Gm); Pms_d(i) = Pm; wp_d(i) = Wcp; 
+%     
+%     % Calculo de Tiempos caracteristicos
+%     [tr,td] = Utils.getTimesRD(y,t);
+%     fprintf("Kp = "+ k_p + ", Kd = " + k_d(i) + ", Ki = " + k_i + "\n");
+%     fprintf("Rise Time: " + num2str(tr) + " s\n");
+%     fprintf("Time Delay: " + num2str(td) + " s\n");
+% end
+% 
+% set(0, 'CurrentFigure', f_step)
+%     grid minor
+%     hold on
+%     box on
+% set(0, 'CurrentFigure', f_nichols)
+%     grid minor
+%     hold on
+%     box on
 
 
 %% --6.3 Respuestas del resto de variables al AP
