@@ -405,7 +405,7 @@ if save == true
 end
 
 % - Combinaciones -
-Kq_nichols = [-0.1 -0.1 -0.2 -0.2];
+Kq_nichols = [-0.1 -0.1 -0.3 -0.3];
 Kalpha_nichols = [0.3 0.5 0.3 0.5];
 figure
 lines = {'-' '--' '-.' ':'};
@@ -422,7 +422,7 @@ if save == true
 end
 
 %% -- 5. Análisis frente a tolerancias aerodinámicas --
-
+save = true;
 plane_OL  = Plane(GlobalHawk);
 plane_Aux = Plane(GlobalHawk);
 
@@ -438,8 +438,8 @@ K_alpha   = - (Falpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
 K_q       = - (Fq-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
 
 % Ganancias de realimentacion escogidas en el apartado anterior
-Kalpha = 0.3;
-Kq = -0.1;
+Kalpha = 0.5;
+Kq = -0.35;
 
 % Funciones de transferencia y Kdl
 Ga_deltae = Utils.forlagTF;
@@ -457,6 +457,7 @@ Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.
 
 [GM_base, PM_base] = margin(Gthetadeltae_SAS);
 GM_base_cumple = 'CUMPLE';
+GM_base = mag2db(GM_base);
 if GM_base < 6 || PM_base < 45
     GM_base_cumple = 'NO CUMPLE';
 end
@@ -480,6 +481,32 @@ for k=1:length(polesAUX_0)
         hold on
     end
 end
+% Obtenemos el amortiguamiento y frecuencia de cada modo base
+count = 1;
+tau_p = [];
+wn_p = [];
+xi_p = [];
+while count <= length(polesAUX_0)
+    if imag(polesAUX_0(count)) == 0
+        if polesAUX_0(count) ~= 0
+            tau_p(end+1) = -1/polesAUX_0(count);
+            count = count + 1;
+        else
+            null_p = null_p + 1;
+            count = count + 1;
+        end
+    else
+        lambda_p = polesAUX_0(count);
+        n_p = real(lambda_p);
+        w_p = abs(imag(lambda_p));
+        wn_p(end+1) = sqrt(n_p^2 + w_p^2);
+        xi_p(end+1) = -n_p/sqrt(n_p^2 + w_p^2);
+        count = count + 2;
+    end
+end
+polesAUX_0_xiwn.tau = tau_p;
+polesAUX_0_xiwn.wn = wn_p;
+polesAUX_0_xiwn.xi = xi_p;
 xlabel('Re(s)','Interpreter','latex','FontSize', 14)
 ylabel('Im(s)','Interpreter','latex','FontSize', 14)
 set(gca,'TickLabelInterpreter','latex')
@@ -511,7 +538,7 @@ for i=1:length(F_alpha)
         end
     end
     [GM, PM] = margin(Gthetadeltae_SAS);
-    GM_alpha(i) = GM;
+    GM_alpha(i) = mag2db(GM);
     PM_alpha(i) = PM;
     if GM_alpha(i) < 4.5 || PM_alpha(i) < 30
         GM_alpha_cumple = 'NO CUMPLE';
@@ -540,7 +567,7 @@ for i=1:length(F_q)
         end
     end
     [GM, PM] = margin(Gthetadeltae_SAS);
-    GM_q(i) = GM;
+    GM_q(i) = mag2db(GM);
     PM_q(i) = PM;
     if GM_q(i) < 4.5 || PM_q(i) < 30
         GM_q_cumple = 'NO CUMPLE';
@@ -569,7 +596,7 @@ for i=1:length(F_deltae)
         end
     end
     [GM, PM] = margin(Gthetadeltae_SAS);
-    GM_deltae(i) = GM;
+    GM_deltae(i) = mag2db(GM);
     PM_deltae(i) = PM;
     if GM_deltae(i) < 4.5 || PM_deltae(i) < 30
         GM_deltae_cumple = 'NO CUMPLE';
@@ -646,9 +673,9 @@ for i=1:length(F_alpha)
     nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
 end
 grid on
-legend('Base','$0.8\cdot Cm\alpha$','$1.2\cdot Cm\alpha$','Interpreter','latex','Location','south','FontSize',12)
+legend('Base','$0.8\cdot C\_{m\_\alpha}$','$1.2\cdot C\_{m\_\alpha}$','Interpreter','latex','Location','south','FontSize',12)
 if save == true
-    saveas(gcf,strcat("Graficas/SAS/Robustez_Nichols_Cmalpha",'eps'))
+    saveas(gcf,"Graficas/SAS/Robustez_Nichols_Cmalpha",'eps')
 end
 
 % - Variacion Cmq -
@@ -665,9 +692,9 @@ for i=1:length(F_q)
     nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
 end
 grid on
-legend('Base','$0.8\cdot Cm\hat{q}$','$1.2\cdot Cm\hat{q}$','Interpreter','latex','Location','south','FontSize',12)
+legend('Base','$0.8\cdot C\_{m\_{\hat{q}}}$','$1.2\cdot C\_{m\_{\hat{q}}}$','Interpreter','latex','Location','south','FontSize',12)
 if save == true
-    saveas(gcf,strcat("Graficas/SAS/Robustez_Nichols_Cmq",'eps'))
+    saveas(gcf,"Graficas/SAS/Robustez_Nichols_Cmq",'eps')
 end
 
 % - Variacion Cmdeltae -
@@ -684,21 +711,22 @@ for i=1:length(F_deltae)
     nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
 end
 grid on
-legend('Base','$0.8\cdot Cm \delta e$','$1.2\cdot Cm \delta e$','Interpreter','latex','Location','south','FontSize',12)
+legend('Base','$0.8\cdot C\_{m\_{\delta\_e}}$','$1.2\cdot C\_{m\_{\delta\_e}}$','Interpreter','latex','Location','south','FontSize',12)
 if save == true
-    saveas(gcf,strcat("Graficas/SAS/Robustez_Nichols_Cmdeltae",'eps'))
+    saveas(gcf,"Graficas/SAS/Robustez_Nichols_Cmdeltae",'eps')
 end
 
 %% -- 5.1 Diseño del SAS --
 
+save = true;
 plane_OL  = Plane(GlobalHawk);
 plane_SAS = Plane(GlobalHawk);
 wn_FQ  = [sqrt(0.28*plane_OL.model.CL.alpha/plane_OL.FC.CLs) sqrt(3.6*plane_OL.model.CL.alpha/plane_OL.FC.CLs)];
 xi_FQ = [0.35 1.30];
 
 % Ganancias de realimentacion escogidas en el apartado anterior
-Kalpha = 0.3;
-Kq = -0.1;
+Kalpha = 0.5;
+Kq = -0.35;
 
 % Funciones de transferencia y Kdl
 Ga_deltae = Utils.forlagTF;
@@ -719,25 +747,18 @@ plane_SAS.lon.Cont.Gthetadeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gthetade
 plane_SAS.lon.Cont.Gqdeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
                                      Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
 
-
-
 % Guardamos las funciones de transferencia del SAS aparte                   
 GSAS_u =  plane_SAS.lon.Cont.Gudeltae.Gfact/K_dl;
 GSAS_alpha =  plane_SAS.lon.Cont.Galphadeltae.Gfact/K_dl;
 GSAS_theta = plane_SAS.lon.Cont.Gthetadeltae.Gfact/K_dl;
 GSAS_q =  plane_SAS.lon.Cont.Gqdeltae.Gfact/K_dl;
 
-% Esquema: delta --> K_DL --> G_actuador --> G_longitudinal --> variable
 % Definir rampa
 tsimtr = [150 50 150 100];    % Tiempo total de simulacion - transitorio [s]
 tsimst = [500 500 500 500];   % Tiempo total de simulacion - estacionario [s]
 tramp  = 5;                   % Tiempo de rampeo [s]
 amp    = 1;                   % Amplitud de la rampa [deg]
 G_a = Utils.forlagTF;
-
-% Se seleccionara una ganancia de Direct-Link que proporcione un incremento
-% de angulo de asiento de 1 grado por cada grado de deflexion del mando de cabeceo
-
 
 fprintf("--------- Tiempos Caracteristicos Lazo Cerrado con SAS en alpha y q -----------\n");
 
@@ -837,21 +858,36 @@ grid on
 %% -- 6.1. Diseño AP: Root Locus
 
 % Valores PID
-k_p = [-0.1,-0.2,-0.5,-1,-2,-5];
-k_i = [0,-0.01,-0.1,-0.2,-0.5,-1];
+k_p = [0, -0.1, -0.2, -0.5, -1, -2];
+k_i = [0, -0.01, -0.1, -0.2, -0.5, -1];
 k_d = 0; % Lo ponemos a cero porque basicamente no afecta demasiado a la estabilidad del sistema
 Gs_theta = Utils.padeTF();
 
-figure
-polesAUX = pole(GSAS_theta);
-poles_SP_0 = polesAUX(1);
-plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
-hold on
-plot(-10,0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
-xlabel('Re(s)','Interpreter','latex')
-ylabel('Im(s)','Interpreter','latex')
-xlim([-20 3])
-ylim([-14 14]) 
+% Valores SAS
+Kalpha = 0.5;
+Kq = -0.35;
+GSAS_theta = K_dl*(Ga_deltae*plane_SAS.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+
+% Root locus
+figure('Position', [10 10 900 400])
+polesAUX_0 = round(pole(GSAS_theta),4);
+zerosAUX_0 = round(zero(GSAS_theta),4);
+polesAUX_0 = sort(setdiff(polesAUX_0,zerosAUX_0));
+for k=1:length(polesAUX_0)
+    if abs(imag(polesAUX_0(k))) > 0
+        plot(polesAUX_0(k),'x','MarkerSize',12,'MarkerEdgeColor','k')
+        hold on       
+    else
+        plot(polesAUX_0(k),0,'x','MarkerSize',12,'MarkerEdgeColor','k')    
+        hold on
+    end
+end
+xlabel('Re(s)','Interpreter','latex','FontSize', 14)
+ylabel('Im(s)','Interpreter','latex','FontSize', 14)
+set(gca,'TickLabelInterpreter','latex')
+xlim([-12 2])
+ylim([-19.5 19.5])
 hold on
 grid minor
 
@@ -866,30 +902,42 @@ for i=1:length(k_p)
         % Quita a la lista de polos los ceros que sean iguales a estos.
         % Para eliminar los polos residuales de la planta libre.
         polesAUXclean = setdiff(polesAUX,zerosAUX);
-        if k_i(i) == 0
-            marker = '^';
-        else
+        if k_p(i) < -0.5
             marker = 's';
+        else
+            marker = '^';
         end
-        color = 'w';
+        if k_i(j) < -0.5
+            color = 'w';
+        else
+            color = [197/255 197/255 197/255];
+        end
+%         marker = 's';
+%         color = 'w';
         for k=1:length(polesAUXclean)
             % -- Bucle en todos los polos --
             % Filtramos los polos cerca del origen (modo fugoide) a
             % mano. Mejorable.
-            if abs(imag(polesAUXclean(k))) >= 0.3
+            if abs(imag(polesAUXclean(k))) > 0
                 plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
                 hold on
-            elseif abs(real(polesAUXclean(k))) >= 0.15
+            elseif real(polesAUXclean(k)) == -10
+            else
                 plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
                 hold on
-            elseif abs(real(polesAUXclean(k))) >= 10
-            else
             end
         end
     end
 end
 sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
-
+h = zeros(5, 1);
+h(1) = plot(NaN,NaN,'x','MarkerEdgeColor','k');
+h(2) = plot(NaN,NaN,'s','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(3) = plot(NaN,NaN,'s','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+h(4) = plot(NaN,NaN,'^','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(5) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+legend(h, 'Planta libre','$k_p < -0.5$, $k_i < -0.5$','$k_p < -0.5$, $k_i >= -0.5$',...
+                           '$k_p >= -0.5$, $k_i < -0.5$','$k_p >= -0.5$, $k_i >= -0.5$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
 
 
 %% -- 6.2 Diseño de AP: PID
@@ -980,7 +1028,7 @@ for i=1:length(k_p)
 
     % Sacamos los valores de margen de fase y ganancia
     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
-    Gms_p(i) = Gm; Pms_p(i) = Pm; wp_p(i) = Wcp; 
+    Gms_p(i) = mag2db(Gm); Pms_p(i) = Pm; wp_p(i) = Wcp; 
     
     % Calculo de Tiempos caracteristicos
     [tr,td] = Utils.getTimesRD(y,t);
@@ -1077,7 +1125,7 @@ for i=1:length(k_i)
     
     % Calculo de margenes de ganancia y fase
     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
-    Gms_i(i) = Gm; Pms_i(i) = Pm; wp_i(i) = Wcp; 
+    Gms_i(i) = mag2db(Gm); Pms_i(i) = Pm; wp_i(i) = Wcp; 
     
     % Calculo de Tiempos caracteristicos
     [tr,td] = Utils.getTimesRD(y,t);
@@ -1196,7 +1244,7 @@ for i=1:length(k_d)
     
     %Calculo de margenes de ganancia y fase
     [Gm,Pm,Wcg,Wcp] = margin(Gap_theta_ol);
-    Gms_d(i) = Gm; Pms_d(i) = Pm; wp_d(i) = Wcp; 
+    Gms_d(i) = mag2db(Gm); Pms_d(i) = Pm; wp_d(i) = Wcp; 
     
     % Calculo de Tiempos caracteristicos
     [tr,td] = Utils.getTimesRD(y,t);
