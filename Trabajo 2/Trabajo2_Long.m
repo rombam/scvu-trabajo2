@@ -866,7 +866,7 @@ Gs_theta = Utils.padeTF();
 % Valores SAS
 Kalpha = 0.5;
 Kq = -0.35;
-GSAS_theta = K_dl*(Ga_deltae*plane_SAS.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
+GSAS_theta = (Ga_deltae*plane_SAS.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
                                      Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
 
 % Root locus
