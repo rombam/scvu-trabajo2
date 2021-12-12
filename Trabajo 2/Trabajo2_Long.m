@@ -51,7 +51,7 @@ plane_OL = Plane(GlobalHawk);
 % Si save = true, guarda graficas en formato .eps en ./Graficas/Lon/
 
 dim = true;
-save = true;
+save = false;
 
 varnames = ["udeltae"; "alphadeltae"; "thetadeltae"; "qdeltae"];
 Gnames = strcat('G', varnames);
@@ -957,7 +957,7 @@ syms = ["-","--",":","-.","-","--"];
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = [-0.05,-0.1,-0.15,-0.2,-0.5,-1];
+k_p = [-0.1-0.2,-0.5,-1,-2,-5];
 k_i = 0;
 k_d = 0;
 Gs_theta = Utils.padeTF();
@@ -1052,8 +1052,8 @@ set(0, 'CurrentFigure', f_nichols)
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = -0.6;
-k_i = [0,-0.01,-0.02,-0.05,-0.2];
+k_p = -1.75;
+k_i = [0,-0.05,-0.2,-0.5,-1,-2];
 k_d = 0;
 Gs_theta = Utils.padeTF();
 
@@ -1149,7 +1149,7 @@ set(0, 'CurrentFigure', f_nichols)
 lims = [1e-2 1e2];
 
 % Valores PID
-k_p = -0.6;
+k_p = -1;
 k_i = -0.2;
 k_d = [0,-0.05,-0.2];
 Gs_theta = Utils.padeTF();
@@ -1265,9 +1265,9 @@ set(0, 'CurrentFigure', f_nichols)
 
 %% --6.3 Respuestas del resto de variables al AP
 
-k_p = -0.6;
+k_p = -1;
 k_i = -0.2;
-k_d = -0.05;
+k_d = -0.1;
 
 % Definir rampa
 tsimtr = [150 50 150 100];    % Tiempo total de simulacion - transitorio [s]
@@ -1313,13 +1313,23 @@ for i = 1:length(varnames)
     ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
     
     % Zoom en perturbacion
-
-    axes('Position',[.30 .67 .15 .15])
-    box on; % put box around new pair of axes
-    indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
-    plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
-    grid on;
-    axis tight
+    
+    if(i == 4 || i == 1)
+        axes('Position',[.30 .67 .15 .15])
+        box on; % put box around new pair of axes
+        indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
+        plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+        grid on;
+        axis tight
+    end
+    if(i == 3 || i == 2)
+        axes('Position',[.3 .2 .15 .15])
+        box on; % put box around new pair of axes
+        indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
+        plot(t(indexOfInterest),y(indexOfInterest),'k'); hold on % plot on new axes
+        grid on;
+        axis tight
+    end
     
     % Estacionario
     subplot(1, 2, 2)
@@ -1342,12 +1352,12 @@ for i = 1:length(varnames)
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
     ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
 
-    if (save == false)
-        sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
-    else
-        sgtitle("")
-        saveas(gcf,strcat("Graficas/Lon/Ramp_", varnames(i)),'eps')
-    end
+%     if (save == false)
+%         sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
+%     else
+%         sgtitle("")
+%         saveas(gcf,strcat("Graficas/Lon/Ramp_", varnames(i)),'eps')
+%     end
     
     % Rise Time and Time Delay Calculation and printing in console
     
