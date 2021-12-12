@@ -939,6 +939,90 @@ h(5) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeC
 legend(h, 'Planta libre','$k_p < -0.5$, $k_i < -0.5$','$k_p < -0.5$, $k_i >= -0.5$',...
                            '$k_p >= -0.5$, $k_i < -0.5$','$k_p >= -0.5$, $k_i >= -0.5$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
 
+%% -- 6.1.1 Diseño AP: Root Locus Kd
+% Fijando Kp y Ki, variar Kd para ver la recuperación de amortiguamiento SP
+
+% Valores PID
+k_p = -1;
+k_i = -0.2;
+k_d = [-0.2 -0.1 -0.05]; % Lo ponemos a cero porque basicamente no afecta demasiado a la estabilidad del sistema
+Gs_theta = Utils.padeTF();
+
+% Valores SAS
+Kalpha = 0.5;
+Kq = -0.35;
+GSAS_theta = (Ga_deltae*plane_SAS.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+
+% Root locus sin AP
+figure('Position', [10 10 900 400])
+polesAUX_0 = round(pole(GSAS_theta),4);
+zerosAUX_0 = round(zero(GSAS_theta),4);
+polesAUX_0 = sort(setdiff(polesAUX_0,zerosAUX_0));
+for k=1:length(polesAUX_0)
+    if abs(imag(polesAUX_0(k))) > 0
+        plot(polesAUX_0(k),'x','MarkerSize',12,'MarkerEdgeColor','k')
+        hold on       
+    else
+        plot(polesAUX_0(k),0,'x','MarkerSize',12,'MarkerEdgeColor','k')    
+        hold on
+    end
+end
+xlabel('Re(s)','Interpreter','latex','FontSize', 14)
+ylabel('Im(s)','Interpreter','latex','FontSize', 14)
+set(gca,'TickLabelInterpreter','latex')
+xlim([-12 2])
+ylim([-19.5 19.5])
+hold on
+grid minor
+
+% Root locus con AP base
+PID_AP = pid(k_p,k_i,0);
+Gap_theta_0 = feedback(GSAS_theta*PID_AP,Gs_theta);
+polesAUX_0_KpKi = round(pole(Gap_theta_0),4);
+zerosAUX_0_KpKi = round(zero(Gap_theta_0),4);
+polesAUX_0_KpKi = sort(setdiff(polesAUX_0_KpKi,zerosAUX_0_KpKi));
+for k=1:length(polesAUX_0_KpKi)
+    if abs(imag(polesAUX_0_KpKi(k))) > 0
+        plot(polesAUX_0_KpKi(k),'^','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','k')
+        hold on       
+    else
+        plot(polesAUX_0_KpKi(k),0,'^','MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','k')    
+        hold on
+    end
+end
+
+for i=1:length(k_d)
+    PID_AP = pid(k_p,k_i,k_d(i));
+    Gap_theta = feedback(GSAS_theta*PID_AP,Gs_theta);
+    polesAUX = round(pole(Gap_theta),4);
+    zerosAUX = round(zero(Gap_theta),4);
+    % Quita a la lista de polos los ceros que sean iguales a estos.
+    % Para eliminar los polos residuales de la planta libre.
+    polesAUXclean = setdiff(polesAUX,zerosAUX);
+    marker = 's';
+    color = 'w';
+    for k=1:length(polesAUXclean)
+        % -- Bucle en todos los polos --
+        % Filtramos los polos cerca del origen (modo fugoide) a
+        % mano. Mejorable.
+        if abs(imag(polesAUXclean(k))) > 0
+            plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+            hold on
+        elseif real(polesAUXclean(k)) == -10
+        else
+            plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+            hold on
+        end
+    end
+end
+
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
+h = zeros(3, 1);
+h(1) = plot(NaN,NaN,'x','MarkerEdgeColor','k');
+h(2) = plot(NaN,NaN,'^','MarkerFaceColor','k','MarkerEdgeColor','k');
+h(3) = plot(NaN,NaN,'s','MarkerFaceColor','w','MarkerEdgeColor','k');
+legend(h, 'Sin AP','$k_d = 0$','$k_d < 0$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
 
 %% -- 6.2 Diseño de AP: PID
 
