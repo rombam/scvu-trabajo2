@@ -140,6 +140,7 @@ for i = 1:length(varnames)
     end
     ax = gca;
     ax.FontSize = 13; 
+    set(gca,'TickLabelInterpreter','latex')
     title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
     ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
@@ -173,6 +174,7 @@ for i = 1:length(varnames)
     end
     ax = gca;
     ax.FontSize = 13; 
+    set(gca,'TickLabelInterpreter','latex')
     title('Estacionario','FontSize', 15, 'Interpreter', 'latex')
     ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
@@ -251,8 +253,9 @@ sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
 % realimentacion en alpha y q.
 % Analisis de la funcion de transferencia de deltae a theta en lazo
 % cerrado.
-clear
+
 plane_OL = Plane(GlobalHawk);
+save = true;
 
 % Funciones de transferencia y Kdl
 Ga_deltae = Utils.forlagTF;
@@ -265,23 +268,28 @@ K_dl = 1/plane_OL.lon.G.Gthetadeltae.K;
 
 % Factores de multiplicidad Cmalpha y Cmq
 F_alpha  = [-0.5 -0.2 0 0.5 1 2 3 4];
-F_alpha = 1;
+% F_alpha = 1;
 F_q      = [-0.5 -0.2 0 0.5 1 2 3 4];
-F_q      = linspace(-5,5,10);
-F_q      = 5;
-%F_q = 1;
+% F_q = 1;
 Kalpha   = - (F_alpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
 Kq       = - (F_q-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
 poles_SP = zeros(length(Kalpha),length(Kq));
 
-% Root locus. Ploteamos primero el corto periodo y el polo del actuador
-% base
+% Root locus. Ploteamos primero el corto periodo, fugoide y polo del
+% actuador base, sin controlar
 figure('Position', [10 10 900 500])
-polesAUX = pole(plane_OL.lon.G.Galphadeltae.Gfact);
-poles_SP_0 = polesAUX(1);
-plot([poles_SP_0 conj(poles_SP_0)],'x','MarkerSize',14,'MarkerEdgeColor','k','MarkerFaceColor','w')
-hold on
-plot(-10,0,'x','MarkerSize',14,'MarkerEdgeColor','k','MarkerFaceColor','w')
+polesAUX_0 = round(pole(plane_OL.lon.G.Gthetadeltae.Gfact),4);
+zerosAUX_0 = round(zero(plane_OL.lon.G.Gthetadeltae.Gfact),4);
+polesAUX_0 = sort(setdiff(polesAUX_0,zerosAUX_0));
+for k=1:length(polesAUX_0)
+    if abs(imag(polesAUX_0(k))) > 0
+        plot(polesAUX_0(k),'x','MarkerSize',12,'MarkerEdgeColor','k')
+        hold on       
+    else
+        plot(polesAUX_0(k),0,'x','MarkerSize',12,'MarkerEdgeColor','k')    
+        hold on
+    end
+end
 xlabel('Re(s)','Interpreter','latex','FontSize', 14)
 ylabel('Im(s)','Interpreter','latex','FontSize', 14)
 set(gca,'TickLabelInterpreter','latex')
@@ -293,7 +301,6 @@ grid minor
 for i=1:length(Kalpha)
     for j=1:length(Kq)
         % -- Ensamblaje de la FT en lazo cerrado --
-        s = tf('s');
         Gthetadeltae_CL{i,j} = K_dl*(Ga_deltae*Gthetadeltae_pl)/(1+Ga_deltae*Kalpha(i)*Gs_alpha*Galphadeltae_pl +...
                                      Kq(j)*Gs_q*Gqdeltae_pl/plane_OL.lon.t_lon);
         polesAUX = round(pole(Gthetadeltae_CL{i,j}),4);
@@ -301,9 +308,6 @@ for i=1:length(Kalpha)
         % Quita a la lista de polos los ceros que sean iguales a estos.
         % Para eliminar los polos residuales de la planta libre.
         polesAUXclean = setdiff(polesAUX,zerosAUX);
-%         if i==4 && j==7
-%             polesAUXCHECK = polesAUXclean;
-%         end
         if Kalpha(i)==0 && Kq(j)==0
         else
             if Kalpha(i) < 0
@@ -321,40 +325,19 @@ for i=1:length(Kalpha)
                 % -- Bucle en todos los polos --
                 % Filtramos los polos cerca del origen (modo fugoide) a
                 % mano. Mejorable.
-                if abs(imag(polesAUXclean(k))) > 1
+                if abs(imag(polesAUXclean(k))) > 0
                     plot(polesAUXclean(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
                     hold on
-
-                elseif real(polesAUXclean(k)) < -1
-                    if real(polesAUXclean(k)) == -10
-                    else
-                        plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
-                        hold on
-                    end
+                elseif real(polesAUXclean(k)) == -10
+                else
+                    plot(polesAUXclean(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+                    hold on
                 end
             end
         end
     end
 end
 sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
-
-% marker = '^';
-% for k=1:length(polesAUXCHECK)
-%     % -- Bucle en todos los polos --
-%     % Filtramos los polos cerca del origen (modo fugoide) a
-%     % mano. Mejorable.
-%     if abs(imag(polesAUXCHECK(k))) > 1
-%         plot(polesAUXCHECK(k),marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','k')
-%         hold on
-% 
-%     elseif real(polesAUXCHECK(k)) < -1
-%         if real(polesAUXCHECK(k)) == -10
-%         else
-%             plot(polesAUXCHECK(k),0,marker,'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor','k')    
-%             hold on
-%         end
-%     end
-% end
 
 h = zeros(5, 1);
 h(1) = plot(NaN,NaN,'x','MarkerEdgeColor','k');
@@ -365,7 +348,348 @@ h(5) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeC
 legend(h, 'Planta libre','$k_{\delta_e \alpha} < 0$, $k_{\delta_e q} < 0$','$k_{\delta_e \alpha} < 0$, $k_{\delta_e q} >= 0$',...
                            '$k_{\delta_e \alpha} >= 0$, $k_{\delta_e q} < 0$','$k_{\delta_e \alpha} >= 0$, $k_{\delta_e q} >= 0$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
 
-%% -- 5. Diseño del SAS --
+% --- Diagramas de Nichols
+lims = [1e-2 1e2];
+nopts = nicholsoptions;
+	nopts.PhaseMatching = 'on';
+	nopts.PhaseMatchingFreq = lims(1);
+	nopts.PhaseMatchingValue = 0;
+    
+	nopts.XLabel.String = '$\phi(\omega)$';
+	nopts.XLabel.FontSize = 13;
+	nopts.XLabel.Interpreter = 'latex';
+    nopts.TickLabel.FontSize = 10;
+    
+	nopts.YLabel.FontSize = 13;
+	nopts.YLabel.Interpreter = 'latex';
+
+	nopts.Title.FontSize = 2;
+	nopts.Title.Interpreter = 'latex';
+    
+    nopts.YLabel.String = '$\left | G_{OL}(i\omega) \right |$';
+    nopts.Title.String = "";
+figure
+% - Barrido Kalpha -
+Kalpha_nichols = [4.1 2 -2 -4.1];
+Kq_nichols = 0;
+lines = {'-' '--' '-.' ':'};
+for i=1:length(Kalpha_nichols)
+    for j=1:length(Kq_nichols)
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha_nichols(i)*Gs_alpha*plane_OL.lon.G.Galphadeltae.Gfact +...
+                            Kq_nichols(j)*Gs_q*plane_OL.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+    end
+end
+grid on
+legend('$k\_{\delta\_e \alpha} = 4.1$','$k\_{\delta\_e \alpha} = 2$','$k\_{\delta\_e \alpha} = -2$','$k\_{\delta\_e \alpha} = -4.1$','Interpreter','latex','Location','northoutside','NumColumns',2,'FontSize',12)
+if save == true
+    saveas(gcf,"Graficas/SAS/Barrido_Nichols_Kalpha",'eps')
+end
+
+% - Barrido Kq -
+Kq_nichols = [0.14 0.1 -0.1 -0.18];
+Kalpha_nichols = 0;
+figure
+lines = {'-' '--' '-.' ':'};
+for i=1:length(Kalpha_nichols)
+    for j=1:length(Kq_nichols)
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha_nichols(i)*Gs_alpha*plane_OL.lon.G.Galphadeltae.Gfact +...
+                            Kq_nichols(j)*Gs_q*plane_OL.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    nicholsplot(Gthetadeltae_SAS,strcat('k',lines{j}), {lims(1), lims(2)},nopts); hold on
+    end
+end
+grid on
+legend('$k\_{\delta\_e q} = 0.14$','$k\_{\delta\_e q} = 0.1$','$k\_{\delta\_e q} = -0.1$','$k\_{\delta\_e q} = -0.18$','Interpreter','latex','Location','northoutside','NumColumns',2,'FontSize',12)
+if save == true
+    saveas(gcf,"Graficas/SAS/Barrido_Nichols_Kq",'eps')
+end
+
+% - Combinaciones -
+Kq_nichols = [-0.1 -0.1 -0.2 -0.2];
+Kalpha_nichols = [0.3 0.5 0.3 0.5];
+figure
+lines = {'-' '--' '-.' ':'};
+for i=1:length(Kalpha_nichols)
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha_nichols(i)*Gs_alpha*plane_OL.lon.G.Galphadeltae.Gfact +...
+                            Kq_nichols(i)*Gs_q*plane_OL.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('$\{k\_{\delta\_e \alpha},k\_{\delta\_e q}\}  = \{0.3, -0.1\}$','$\{k\_{\delta\_e \alpha},k\_{\delta\_e q}\}  = \{0.5, -0.1\}$',...
+       '$\{k\_{\delta\_e \alpha},k\_{\delta\_e q}\}  = \{0.3, -0.2\}$','$\{k\_{\delta\_e \alpha},k\_{\delta\_e q}\}  = \{0.5, -0.2\}$','Interpreter','latex','Location','northoutside','NumColumns',2,'FontSize',12)
+if save == true
+    saveas(gcf,"Graficas/SAS/Barrido_Nichols_Combinaciones",'eps')
+end
+
+%% -- 5. Análisis frente a tolerancias aerodinámicas --
+
+plane_OL  = Plane(GlobalHawk);
+plane_Aux = Plane(GlobalHawk);
+
+% Factores de multiplicidad Cmalpha y Cmq
+F_alpha  = [0.8 1.2];
+F_q  = [0.8 1.2];
+F_deltae  = [0.8 1.2];
+
+% Barrido (apartado anterior)
+Falpha  = [-0.5 -0.2 0 0.5 1 2 3 4];
+Fq      = [-0.5 -0.2 0 0.5 1 2 3 4];
+K_alpha   = - (Falpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
+K_q       = - (Fq-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
+
+% Ganancias de realimentacion escogidas en el apartado anterior
+Kalpha = 0.3;
+Kq = -0.1;
+
+% Funciones de transferencia y Kdl
+Ga_deltae = Utils.forlagTF;
+Gs_alpha = 1;
+Gs_q = 1;
+K_dl = 1/plane_OL.lon.G.Gthetadeltae.K;
+
+% Función de transferencia closed-loop
+Gthetadeltae_SAS_CL = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                         Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+
+% Función de transferencia open-loop
+Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                         Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+
+[GM_base, PM_base] = margin(Gthetadeltae_SAS);
+GM_base_cumple = 'CUMPLE';
+if GM_base < 6 || PM_base < 45
+    GM_base_cumple = 'NO CUMPLE';
+end
+fprintf('----------- Robustez frente a tolerancias aerodinámicas ------------\n')
+fprintf(strcat('Kalpha = ',num2str(Kalpha),'    Kq =',num2str(Kq),'\n'))
+fprintf('--------- BASE ----------\n')
+fprintf(strcat('GM = ',num2str(round(GM_base,4)),'  PM -20 = ',num2str(round(PM_base,4)),'\n'))
+fprintf(strcat(GM_base_cumple,'\n'))
+
+% Root locus
+figure('Position', [10 10 900 400])
+polesAUX_0 = round(pole(Gthetadeltae_SAS_CL),4);
+zerosAUX_0 = round(zero(Gthetadeltae_SAS_CL),4);
+polesAUX_0 = sort(setdiff(polesAUX_0,zerosAUX_0));
+for k=1:length(polesAUX_0)
+    if abs(imag(polesAUX_0(k))) > 0
+        plot(polesAUX_0(k),'x','MarkerSize',12,'MarkerEdgeColor','k')
+        hold on       
+    else
+        plot(polesAUX_0(k),0,'x','MarkerSize',12,'MarkerEdgeColor','k')    
+        hold on
+    end
+end
+xlabel('Re(s)','Interpreter','latex','FontSize', 14)
+ylabel('Im(s)','Interpreter','latex','FontSize', 14)
+set(gca,'TickLabelInterpreter','latex')
+xlim([-12 2])
+ylim([-19.5 19.5])
+hold on
+grid minor
+marker = ['v' '^'];
+
+GM_alpha_cumple = 'CUMPLE';
+for i=1:length(F_alpha)
+    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.alpha*F_alpha(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS_CL = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                            Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    polesAUX = round(pole(Gthetadeltae_SAS_CL),4);
+    zerosAUX = round(zero(Gthetadeltae_SAS_CL),4);
+    polesAUX_alpha{i} = setdiff(polesAUX,zerosAUX);
+    color = 'w';
+    for k=1:length(polesAUX_alpha{i})
+        if abs(imag(polesAUX_alpha{i}(k))) > 0
+            plot(polesAUX_alpha{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+            hold on       
+        else
+            plot(polesAUX_alpha{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+            hold on
+        end
+    end
+    [GM, PM] = margin(Gthetadeltae_SAS);
+    GM_alpha(i) = GM;
+    PM_alpha(i) = PM;
+    if GM_alpha(i) < 4.5 || PM_alpha(i) < 30
+        GM_alpha_cumple = 'NO CUMPLE';
+    end
+end
+
+GM_q_cumple = 'CUMPLE';
+for i=1:length(F_q)
+    plane_Aux.model.Cm.q = plane_OL.model.Cm.q*F_q(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS_CL = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    polesAUX = round(pole(Gthetadeltae_SAS_CL),4);
+    zerosAUX = round(zero(Gthetadeltae_SAS_CL),4);
+    polesAUX_q{i} = setdiff(polesAUX,zerosAUX);
+    color = [197/255 197/255 197/255];
+    for k=1:length(polesAUX_q{i})
+        if abs(imag(polesAUX_q{i}(k))) > 0
+            plot(polesAUX_q{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+            hold on       
+        else
+            plot(polesAUX_q{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+            hold on
+        end
+    end
+    [GM, PM] = margin(Gthetadeltae_SAS);
+    GM_q(i) = GM;
+    PM_q(i) = PM;
+    if GM_q(i) < 4.5 || PM_q(i) < 30
+        GM_q_cumple = 'NO CUMPLE';
+    end
+end
+
+GM_deltae_cumple = 'CUMPLE';
+for i=1:length(F_deltae)
+    plane_Aux.model.Cm.deltae = plane_OL.model.Cm.deltae*F_deltae(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS_CL = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                            Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    polesAUX = round(pole(Gthetadeltae_SAS_CL),4);
+    zerosAUX = round(zero(Gthetadeltae_SAS_CL),4);
+    polesAUX_deltae{i} = setdiff(polesAUX,zerosAUX);
+    color = 'k';
+    for k=1:length(polesAUX_deltae{i})
+        if abs(imag(polesAUX_deltae{i}(k))) > 0
+            plot(polesAUX_deltae{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
+            hold on       
+        else
+            plot(polesAUX_deltae{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
+            hold on
+        end
+    end
+    [GM, PM] = margin(Gthetadeltae_SAS);
+    GM_deltae(i) = GM;
+    PM_deltae(i) = PM;
+    if GM_deltae(i) < 4.5 || PM_deltae(i) < 30
+        GM_deltae_cumple = 'NO CUMPLE';
+    end
+end
+
+for k=1:length(polesAUX_0)
+    if abs(imag(polesAUX_0(k))) > 0
+        plot(polesAUX_0(k),'x','MarkerSize',12,'MarkerEdgeColor','k')
+        hold on       
+    else
+        plot(polesAUX_0(k),0,'x','MarkerSize',12,'MarkerEdgeColor','k')    
+        hold on
+    end
+end
+
+sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
+h = zeros(6, 1);
+h(1) = plot(NaN,NaN,'v','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(2) = plot(NaN,NaN,'^','MarkerFaceColor','w','MarkerEdgeColor','k');
+h(3) = plot(NaN,NaN,'v','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+h(4) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
+h(5) = plot(NaN,NaN,'v','MarkerFaceColor','k','MarkerEdgeColor','k');
+h(6) = plot(NaN,NaN,'^','MarkerFaceColor','k','MarkerEdgeColor','k');
+legend(h,'$0.8\cdot C_{m\alpha}$','$1.2\cdot C_{m\alpha}$', '$0.8\cdot C_{m\hat{q}}$','$1.2\cdot C_{m\hat{q}}$',...
+                           '$0.8\cdot C_{m\delta_e}$','$1.2\cdot C_{m\delta_e}$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
+
+% --- Chequeo de márgenes de estabilidad ---
+fprintf('------ +-20 Cmalpha -------\n')
+fprintf(strcat('GM -20 = ',num2str(round(GM_alpha(1),4)),'  PM -20 = ',num2str(round(PM_alpha(1),4)),'\n'))
+fprintf(strcat('GM +20 = ',num2str(round(GM_alpha(2),4)),'  PM +20 = ',num2str(round(PM_alpha(2),4)),'\n'))
+fprintf(strcat(GM_alpha_cumple,'\n'))
+fprintf('------ +-20 Cmq -------\n')
+fprintf(strcat('GM -20 = ',num2str(round(GM_q(1),4)),'  PM -20 = ',num2str(round(PM_q(1),4)),'\n'))
+fprintf(strcat('GM +20 = ',num2str(round(GM_q(2),4)),'  PM +20 = ',num2str(round(PM_q(2),4)),'\n'))
+fprintf(strcat(GM_q_cumple,'\n'))
+fprintf('------ +-20 Cmdeltae -------\n')
+fprintf(strcat('GM -20 = ',num2str(round(GM_deltae(1),4)),'  PM -20 = ',num2str(round(PM_deltae(1),4)),'\n'))
+fprintf(strcat('GM +20 = ',num2str(round(GM_deltae(2),4)),'  PM +20 = ',num2str(round(PM_deltae(2),4)),'\n'))
+fprintf(strcat(GM_deltae_cumple,'\n'))
+
+% --- Diagramas de Nichols ---
+lims = [1e-2 1e2];
+nopts = nicholsoptions;
+	nopts.PhaseMatching = 'on';
+	nopts.PhaseMatchingFreq = lims(1);
+	nopts.PhaseMatchingValue = 0;
+    
+	nopts.XLabel.String = '$\phi(\omega)$';
+	nopts.XLabel.FontSize = 13;
+	nopts.XLabel.Interpreter = 'latex';
+    nopts.TickLabel.FontSize = 10;
+    
+	nopts.YLabel.FontSize = 13;
+	nopts.YLabel.Interpreter = 'latex';
+
+	nopts.Title.FontSize = 2;
+	nopts.Title.Interpreter = 'latex';
+    
+    nopts.YLabel.String = '$\left | G_{OL}(i\omega) \right |$';
+    nopts.Title.String = "";
+
+% - Variacion Cmalpha -
+figure
+Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_OL.lon.G.Galphadeltae.Gfact +...
+                         Kq*Gs_q*plane_OL.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+nicholsplot(Gthetadeltae_SAS,'k', {lims(1), lims(2)},nopts); hold on    
+lines = {'--' '-.'};
+for i=1:length(F_alpha)
+    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.alpha*F_alpha(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                            Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('Base','$0.8\cdot Cm\alpha$','$1.2\cdot Cm\alpha$','Interpreter','latex','Location','south','FontSize',12)
+if save == true
+    saveas(gcf,strcat("Graficas/SAS/Robustez_Nichols_Cmalpha",'eps'))
+end
+
+% - Variacion Cmq -
+figure
+Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_OL.lon.G.Galphadeltae.Gfact +...
+                         Kq*Gs_q*plane_OL.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+nicholsplot(Gthetadeltae_SAS,'k', {lims(1), lims(2)},nopts); hold on    
+lines = {'--' '-.'};
+for i=1:length(F_q)
+    plane_Aux.model.Cm.q = plane_OL.model.Cm.q*F_q(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                            Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('Base','$0.8\cdot Cm\hat{q}$','$1.2\cdot Cm\hat{q}$','Interpreter','latex','Location','south','FontSize',12)
+if save == true
+    saveas(gcf,strcat("Graficas/SAS/Robustez_Nichols_Cmq",'eps'))
+end
+
+% - Variacion Cmdeltae -
+figure
+Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_OL.lon.G.Galphadeltae.Gfact +...
+                         Kq*Gs_q*plane_OL.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+nicholsplot(Gthetadeltae_SAS,'k', {lims(1), lims(2)},nopts); hold on    
+lines = {'--' '-.'};
+for i=1:length(F_deltae)
+    plane_Aux.model.Cm.deltae = plane_OL.model.Cm.deltae*F_deltae(i);
+    plane_Aux = plane_Aux.recalc;
+    Gthetadeltae_SAS = K_dl*Ga_deltae*(Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
+                            Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
+    nicholsplot(Gthetadeltae_SAS,strcat('k',lines{i}), {lims(1), lims(2)},nopts); hold on
+end
+grid on
+legend('Base','$0.8\cdot Cm \delta e$','$1.2\cdot Cm \delta e$','Interpreter','latex','Location','south','FontSize',12)
+if save == true
+    saveas(gcf,strcat("Graficas/SAS/Robustez_Nichols_Cmdeltae",'eps'))
+end
+
+%% -- 5.1 Diseño del SAS --
 
 plane_OL  = Plane(GlobalHawk);
 plane_SAS = Plane(GlobalHawk);
@@ -373,8 +697,8 @@ wn_FQ  = [sqrt(0.28*plane_OL.model.CL.alpha/plane_OL.FC.CLs) sqrt(3.6*plane_OL.m
 xi_FQ = [0.35 1.30];
 
 % Ganancias de realimentacion escogidas en el apartado anterior
-Kalpha = 2;
-Kq = -0.2;
+Kalpha = 0.3;
+Kq = -0.1;
 
 % Funciones de transferencia y Kdl
 Ga_deltae = Utils.forlagTF;
@@ -387,13 +711,13 @@ K_dl = 1/plane_OL.lon.G.Gthetadeltae.K;
 
 % Funciones de transferencia
 plane_SAS.lon.Cont.Gudeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gudeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
 plane_SAS.lon.Cont.Galphadeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Galphadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
 plane_SAS.lon.Cont.Gthetadeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
 plane_SAS.lon.Cont.Gqdeltae.Gfact = K_dl*(Ga_deltae*plane_SAS.lon.G.Gqdeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_SAS.lon.G.Galphadeltae.Gfact +...
-                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact);
+                                     Kq*Gs_q*plane_SAS.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
 
 
 
@@ -440,6 +764,7 @@ for i = 1:length(varnames)
     end
     ax = gca;
     ax.FontSize = 13; 
+    set(gca,'TickLabelInterpreter','latex')
     title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
     ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
@@ -472,9 +797,12 @@ for i = 1:length(varnames)
         hold on
         plot(t,u,'k-.')
         legend('Respuesta SAS','Respuesta PL', '$\Delta \delta_e$', 'Interpreter', 'latex')
+    else
+        legend('Respuesta SAS','Respuesta PL', 'Interpreter', 'latex')
     end
     ax = gca;
-    ax.FontSize = 13; 
+    ax.FontSize = 13;
+    set(gca,'TickLabelInterpreter','latex')
     title('Estacionario','FontSize', 15, 'Interpreter', 'latex')
     ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
@@ -505,166 +833,6 @@ bode(GSAS_theta*K_dl)
 hold on
 legend('Kdl + Ga', 'Kdl + Ga + SAS')
 grid on
-%% -- 5.1. Análisis frente a tolerancias aerodinámicas --
-clear
-
-plane_OL  = Plane(GlobalHawk);
-plane_Aux = Plane(GlobalHawk);
-
-% Factores de multiplicidad Cmalpha y Cmq
-F_alpha  = [0.8 1.2];
-F_q  = [0.8 1.2];
-F_deltae  = [0.8 1.2];
-
-% Barrido (apartado anterior)
-Falpha  = [-0.5 -0.2 0 0.5 1 2 3 4];
-Fq      = [-0.5 -0.2 0 0.5 1 2 3 4];
-K_alpha   = - (Falpha-1)*plane_OL.lon.Cm.alpha/plane_OL.lon.Cm.deltae;
-K_q       = - (Fq-1)*plane_OL.lon.Cm.q/plane_OL.lon.Cm.deltae*plane_OL.lon.t_lon;
-
-% Ganancias de realimentacion escogidas en el apartado anterior
-Kalpha = 0.75;
-Kq = -20;
-
-% Funciones de transferencia y Kdl
-Ga_deltae = Utils.forlagTF;
-Gs_alpha = 1;
-Gs_q = 1;
-K_dl = 1/plane_OL.lon.G.Gthetadeltae.K;
-
-Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
-                         Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
-% Root locus
-figure('Position', [10 10 900 400])
-polesAUX_0 = round(pole(Gthetadeltae_SAS),4);
-zerosAUX_0 = round(zero(Gthetadeltae_SAS),4);
-polesAUX_0 = sort(setdiff(polesAUX_0,zerosAUX_0));
-for k=1:length(polesAUX_0)
-    if abs(imag(polesAUX_0(k))) > 0
-        plot(polesAUX_0(k),'x','MarkerSize',12,'MarkerEdgeColor','k')
-        hold on       
-    else
-        plot(polesAUX_0(k),0,'x','MarkerSize',12,'MarkerEdgeColor','k')    
-        hold on
-    end
-end
-% plot([polesAUX_0(4) conj(polesAUX_0(4))],'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
-% hold on
-% plot(polesAUX_0(3),0,'x','MarkerSize',12,'MarkerEdgeColor','k','MarkerFaceColor','w')
-xlabel('Re(s)','Interpreter','latex')
-ylabel('Im(s)','Interpreter','latex')
-xlim([-10 5])
-ylim([-19.5 19.5])
-hold on
-grid minor
-marker = ['v' '^'];
-
-GM_alpha_cumple = 'CUMPLE';
-for i=1:length(F_alpha)
-    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.alpha*F_alpha(i);
-    plane_Aux = plane_Aux.recalc;
-    Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
-                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact/plane_OL.lon.t_lon);
-    polesAUX = round(pole(Gthetadeltae_SAS),4);
-    zerosAUX = round(zero(Gthetadeltae_SAS),4);
-    polesAUX_alpha{i} = setdiff(polesAUX,zerosAUX);
-    color = 'w';
-    for k=1:length(polesAUX_alpha{i})
-        if abs(imag(polesAUX_alpha{i}(k))) > 0
-            plot(polesAUX_alpha{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
-            hold on       
-        else
-            plot(polesAUX_alpha{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
-            hold on
-        end
-    end
-    [GM, PM] = margin(Gthetadeltae_SAS);
-    GM_alpha(i) = GM;
-    PM_alpha(i) = PM;
-    if GM_alpha(i) < 4.5 || PM_alpha(i) < 30
-        GM_alpha_cumple = 'NO CUMPLE';
-    end
-end
-
-GM_q_cumple = 'CUMPLE';
-for i=1:length(F_q)
-    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.q*F_q(i);
-    plane_Aux = plane_Aux.recalc;
-    Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
-                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact);
-    polesAUX = round(pole(Gthetadeltae_SAS),4);
-    zerosAUX = round(zero(Gthetadeltae_SAS),4);
-    polesAUX_q{i} = setdiff(polesAUX,zerosAUX);
-    color = [197/255 197/255 197/255];
-    for k=1:length(polesAUX_q{i})
-        if abs(imag(polesAUX_q{i}(k))) > 0
-            plot(polesAUX_q{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
-            hold on       
-        else
-            plot(polesAUX_q{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
-            hold on
-        end
-    end
-    [GM, PM] = margin(Gthetadeltae_SAS);
-    GM_q(i) = GM;
-    PM_q(i) = PM;
-    if GM_q(i) < 4.5 || PM_q(i) < 30
-        GM_q_cumple = 'NO CUMPLE';
-    end
-end
-
-GM_deltae_cumple = 'CUMPLE';
-for i=1:length(F_deltae)
-    plane_Aux.model.Cm.alpha = plane_OL.model.Cm.deltae*F_deltae(i);
-    plane_Aux = plane_Aux.recalc;
-    Gthetadeltae_SAS = K_dl*(Ga_deltae*plane_Aux.lon.G.Gthetadeltae.Gfact)/(1+Ga_deltae*Kalpha*Gs_alpha*plane_Aux.lon.G.Galphadeltae.Gfact +...
-                             Kq*Gs_q*plane_Aux.lon.G.Gqdeltae.Gfact);
-    polesAUX = round(pole(Gthetadeltae_SAS),4);
-    zerosAUX = round(zero(Gthetadeltae_SAS),4);
-    polesAUX_deltae{i} = setdiff(polesAUX,zerosAUX);
-    color = 'k';
-    for k=1:length(polesAUX_deltae{i})
-        if abs(imag(polesAUX_deltae{i}(k))) > 0
-            plot(polesAUX_deltae{i}(k),marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)
-            hold on       
-        else
-            plot(polesAUX_deltae{i}(k),0,marker(i),'MarkerSize',8,'MarkerEdgeColor','k','MarkerFaceColor',color)    
-            hold on
-        end
-    end
-    [GM, PM] = margin(Gthetadeltae_SAS);
-    GM_deltae(i) = GM;
-    PM_deltae(i) = PM;
-    if GM_deltae(i) < 4.5 || PM_deltae(i) < 30
-        GM_deltae_cumple = 'NO CUMPLE';
-    end
-end
-
-sgrid([0.1 0.2 0.3 0.4 0.5 0.6 0.8],[4 8 12 16 20 24])
-h = zeros(6, 1);
-h(1) = plot(NaN,NaN,'v','MarkerFaceColor','w','MarkerEdgeColor','k');
-h(2) = plot(NaN,NaN,'^','MarkerFaceColor','w','MarkerEdgeColor','k');
-h(3) = plot(NaN,NaN,'v','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
-h(4) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeColor','k');
-h(5) = plot(NaN,NaN,'v','MarkerFaceColor','k','MarkerEdgeColor','k');
-h(6) = plot(NaN,NaN,'^','MarkerFaceColor','k','MarkerEdgeColor','k');
-legend(h, '$0.8\cdot C_{m\hat{q}}$','$1.2\cdot C_{m\hat{q}}$','$0.8\cdot C_{m\alpha}$','$1.2\cdot C_{m\alpha}$',...
-                           '$0.8\cdot C_{m\delta_e}$','$1.2\cdot C_{m\delta_e}$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
-
-fprintf('----------- Robustez frente a tolerancias aerodinámicas ------------\n')
-fprintf(strcat('Kalpha = ',num2str(Kalpha),'    Kq =',num2str(Kq),'\n'))
-fprintf('------ +-20 Cmalpha -------\n')
-fprintf(strcat('GM -20 = ',num2str(round(GM_alpha(1),4)),'  PM -20 = ',num2str(round(PM_alpha(1),4)),'\n'))
-fprintf(strcat('GM +20 = ',num2str(round(GM_alpha(2),4)),'  PM +20 = ',num2str(round(PM_alpha(2),4)),'\n'))
-fprintf(strcat(GM_alpha_cumple,'\n'))
-fprintf('------ +-20 Cmq -------\n')
-fprintf(strcat('GM -20 = ',num2str(round(GM_q(1),4)),'  PM -20 = ',num2str(round(PM_q(1),4)),'\n'))
-fprintf(strcat('GM +20 = ',num2str(round(GM_q(2),4)),'  PM +20 = ',num2str(round(PM_q(2),4)),'\n'))
-fprintf(strcat(GM_q_cumple,'\n'))
-fprintf('------ +-20 Cmdeltae -------\n')
-fprintf(strcat('GM -20 = ',num2str(round(GM_deltae(1),4)),'  PM -20 = ',num2str(round(PM_deltae(1),4)),'\n'))
-fprintf(strcat('GM +20 = ',num2str(round(GM_deltae(2),4)),'  PM +20 = ',num2str(round(PM_deltae(2),4)),'\n'))
-fprintf(strcat(GM_deltae_cumple,'\n'))
 
 %% -- 6.1. Diseño AP: Root Locus
 
