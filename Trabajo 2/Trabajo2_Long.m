@@ -1520,12 +1520,12 @@ for i = 1:length(varnames)
     xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
     ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
 
-%     if (save == false)
-%         sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
-%     else
-%         sgtitle("")
-%         saveas(gcf,strcat("Graficas/Lon/Ramp_", varnames(i)),'eps')
-%     end
+    if (save == false)
+        sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
+    else
+        sgtitle("")
+        saveas(gcf,strcat("Graficas/AP/Ramp_", varnames(i),"AP_ONLY"),'eps')
+    end
     
     % Rise Time and Time Delay Calculation and printing in console
     
@@ -1534,6 +1534,133 @@ for i = 1:length(varnames)
     fprintf("Rise Time: " + num2str(tr) + " s\n");
     fprintf("Time Delay: " + num2str(td) + " s\n");
 
+end
+
+%% --7. Comparación Final SAS vs No SAS vs AP
+
+k_p = -1;
+k_i = -0.2;
+k_d = -0.1;
+
+syms = ["-","--","-."];
+
+% Definir rampa
+tsimtr = [150 50 150 100];    % Tiempo total de simulacion - transitorio [s]
+tsimst = [500 500 500 500];   % Tiempo total de simulacion - estacionario [s]
+tramp  = 5;                   % Tiempo de rampeo [s]
+amp    = 1;                   % Amplitud de la rampa [deg]
+delay = 0.1;                  % Delay del actuador
+
+PID_AP = pid(k_p,k_i,k_d);
+Gs_theta = Utils.padeTF();
+load('Gaps.mat');
+Gaps = [Gap_u,Gap_alpha,GSAS_theta,Gap_q];
+GSASs = [GSAS_u,GSAS_alpha,GSAS_theta,GSAS_q];
+
+fprintf("--------- Tiempos Caracteristicos AP para cada variable en el sistema PLANTA LIBRE vs SAS vs AUTOPILOT -----------\n");
+
+for i = 1:length(varnames)
+    fig = figure('Position', [100, 100, 1120, 420]);
+    
+    if(i == 3)
+        Gap = feedback(Gaps(i)*PID_AP,Gs_theta);
+    else
+        Gap = Gaps(i);
+    end
+    % Transitorio
+    subplot(1, 2, 1)
+    hold on
+    t = 0:0.05:tsimtr(i);
+    u = max(0,min(amp/tramp*(t),amp));
+    grid minor
+    hold on
+    box on
+   if(i == 3)
+        [y_ap, t_out_ap, ~] = lsim(Gap*scales(i), u, t);
+        [y_SAS,t_out_sas,~] = lsim(GSASs(i)*K_dl*scales(i),u,t);
+        [y,t_out, ~] = lsim(plane_OL.lon.G.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i)*G_a*K_dl, u, t);
+    else
+        [y_ap, t_out_ap, ~] = lsim(Gap*scales(i), u, t);
+        [y_SAS,t_out_sas,~] = lsim(GSASs(i)*K_dl*scales(i),u,t);
+        [y,t_out, ~] = lsim(plane_OL.lon.G.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i)*G_a*K_dl, u, t);
+    end
+    plot(t_out, y, syms(3),'Color','k'); hold on
+    plot(t_out, y_SAS, syms(2),'Color','k'); hold on
+    plot(t_out, y_ap, syms(1),'Color','k'); hold on
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Transitorio','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+    
+    % Zoom en perturbacion
+    
+    if(i == 4 || i == 1)
+        axes('Position',[.30 .67 .15 .15])
+        box on; % put box around new pair of axes
+        indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
+        plot(t(indexOfInterest),y(indexOfInterest),syms(3),'Color','k'); hold on % plot on new axes
+        plot(t(indexOfInterest),y_SAS(indexOfInterest),syms(2),'Color','k'); hold on 
+        plot(t(indexOfInterest),y_ap(indexOfInterest),syms(1),'Color','k'); hold on 
+        grid on;
+        axis tight
+    end
+    if(i == 3 || i == 2)
+        axes('Position',[.3 .2 .15 .15])
+        box on; % put box around new pair of axes
+        indexOfInterest = (t < 4) & (t > 0); % range of t near perturbation
+        plot(t(indexOfInterest),y(indexOfInterest),syms(3),'Color','k'); hold on % plot on new axes
+        plot(t(indexOfInterest),y_SAS(indexOfInterest),syms(2),'Color','k'); hold on 
+        plot(t(indexOfInterest),y_ap(indexOfInterest),syms(1),'Color','k'); hold on 
+        grid on;
+        axis tight
+    end
+    
+    % Estacionario
+    subplot(1, 2, 2)
+    t = 0:0.05:tsimst(i);
+    u = max(0,min(amp/tramp*(t),amp));
+    grid minor
+    hold on
+    box on
+    if(i == 3)
+        [y_ap, t_out_ap, ~] = lsim(Gap*scales(i), u, t);
+        [y_SAS,t_out_sas,~] = lsim(GSASs(i)*K_dl*scales(i),u,t);
+        [y,t_out, ~] = lsim(plane_OL.lon.G.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i)*G_a*K_dl, u, t);
+    else
+        [y_ap, t_out_ap, ~] = lsim(Gap*scales(i), u, t);
+        [y_SAS,t_out_sas,~] = lsim(GSASs(i)*K_dl*scales(i),u,t);
+        [y,t_out, ~] = lsim(plane_OL.lon.G.(genvarname(Gnames(i))).(genvarname("Gfact"))*scales(i)*G_a*K_dl, u, t);
+    end
+    plot(t_out, y, syms(3),'Color','k'); hold on
+    plot(t_out, y_SAS, syms(2),'Color','k'); hold on
+    plot(t_out, y_ap, syms(1),'Color','k'); hold on
+    ax = gca;
+    ax.FontSize = 13; 
+    title('Estacionario','FontSize', 15, 'Interpreter', 'latex')
+    ylabel(Respnames_latex(i),'FontSize', 15, 'Interpreter', 'latex')
+    xlabel('$t$ [s]','FontSize', 15, 'Interpreter', 'latex')
+    ylim([min(y)-(abs(max(y)-min(y)))*0.1 max(y)+(abs(max(y)-min(y)))*0.1])
+    legend("Open Loop Plant","SAS","Autopilot",'Interpreter','latex');
+
+    if (save == false)
+        sgtitle(strcat('\underline{Respuesta rampa $\Delta\delta_e=', num2str(amp), angleunits, ', ', ' $t_{ramp}=', num2str(tramp), 's$}'), 'Interpreter', 'latex')
+    else
+        sgtitle("")
+        saveas(gcf,strcat("Graficas/AP/Ramp_", varnames(i),"SASvsNoSASvsAP"),'eps')
+    end
+    
+    % Rise Time and Time Delay Calculation and printing in console
+    
+    [tr_p,td_p] = Utils.getTimesRD(y,t);
+    [tr_ap,td_ap] = Utils.getTimesRD(y_ap,t);
+    [tr_SAS,td_SAS] = Utils.getTimesRD(y_SAS,t);
+    fprintf(" ---- " + varnames(i)+ " ----\n");
+    fprintf("         PLANTA LIBRE | SAS | AP \n");
+    fprintf("RISE TIME: " + num2str(tr_p) + " s   | " +num2str(tr_SAS) + " s  |" + num2str(tr_ap) + " s \n");
+    fprintf("DELAY TIME: " + num2str(td_p) + " s   | " +num2str(td_SAS) + " s  |" + num2str(td_ap) + " s \n");
+    
 end
 
 
