@@ -716,9 +716,9 @@ if save == true
     saveas(gcf,"Graficas/SAS/Robustez_Nichols_Cmdeltae",'eps')
 end
 
-%% -- 5.1 DiseÃ±o del SAS --
+%% -- 5.1 Diseño del SAS --
 
-save = true;
+save = false;
 plane_OL  = Plane(GlobalHawk);
 plane_SAS = Plane(GlobalHawk);
 wn_FQ  = [sqrt(0.28*plane_OL.model.CL.alpha/plane_OL.FC.CLs) sqrt(3.6*plane_OL.model.CL.alpha/plane_OL.FC.CLs)];
@@ -941,13 +941,13 @@ h(5) = plot(NaN,NaN,'^','MarkerFaceColor',[197/255 197/255 197/255],'MarkerEdgeC
 legend(h, 'Planta libre','$k_p < -0.5$, $k_i < -0.5$','$k_p < -0.5$, $k_i >= -0.5$',...
                            '$k_p >= -0.5$, $k_i < -0.5$','$k_p >= -0.5$, $k_i >= -0.5$', 'Interpreter', 'latex', 'Location','northoutside', 'NumColumns', 3, 'Fontsize', 12);
 
-%% -- 6.1.1 DiseÃ±o AP: Root Locus Kd
+%% -- 6.1.1 Diseño AP: Root Locus Kd
 % Fijando Kp y Ki, variar Kd para ver la recuperaciÃ³n de amortiguamiento SP
 
 % Valores PID
 k_p_res = -1;
 k_i_res = -0.2;
-k_d_res = [-0.2 -0.1 -0.05]; % Lo ponemos a cero porque basicamente no afecta demasiado a la estabilidad del sistema
+k_d_res = [-0.1]; % Lo ponemos a cero porque basicamente no afecta demasiado a la estabilidad del sistema
 Gs_theta = Utils.padeTF();
 
 % Valores SAS
